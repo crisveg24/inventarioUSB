@@ -1,0 +1,68 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Package, TrendingUp, AlertTriangle, XCircle } from "lucide-react"
+import type { InventoryStats } from "@/lib/inventory-data"
+import { formatCurrency } from "@/lib/inventory-data"
+
+interface StatsCardsProps {
+  stats: InventoryStats
+  isLoading?: boolean
+}
+
+export function StatsCards({ stats, isLoading = false }: StatsCardsProps) {
+  const cards = [
+    {
+      title: "Total Items",
+      value: stats.totalItems.toLocaleString(),
+      description: "Productos en inventario",
+      icon: Package,
+      color: "text-blue-500",
+    },
+    {
+      title: "Valor Total",
+      value: formatCurrency(stats.totalValue),
+      description: "Valor del inventario",
+      icon: TrendingUp,
+      color: "text-green-500",
+    },
+    {
+      title: "Stock Bajo",
+      value: stats.lowStockItems.toString(),
+      description: "Productos con stock bajo",
+      icon: AlertTriangle,
+      color: "text-yellow-500",
+    },
+    {
+      title: "Sin Stock",
+      value: stats.outOfStockItems.toString(),
+      description: "Productos agotados",
+      icon: XCircle,
+      color: "text-red-500",
+    },
+  ]
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-tour="stats-cards">
+      {cards.map((card, index) => (
+        <Card key={index} className="border-border bg-card hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
+            <div className={`h-10 w-10 rounded-full bg-gradient-to-br ${
+              card.color.includes('blue') ? 'from-blue-400 to-blue-600' :
+              card.color.includes('green') ? 'from-green-400 to-green-600' :
+              card.color.includes('yellow') ? 'from-yellow-400 to-yellow-600' :
+              'from-red-400 to-red-600'
+            } flex items-center justify-center shadow-lg`}>
+              <card.icon className="h-5 w-5 text-white" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold text-foreground ${isLoading ? 'animate-pulse' : ''}`}>
+              {card.value}
+            </div>
+            <p className="text-xs text-muted-foreground">{card.description}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
