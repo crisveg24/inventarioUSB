@@ -9,11 +9,14 @@ interface CategoryChartProps {
 }
 
 const COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
+  "#3b82f6", // Azul
+  "#10b981", // Verde
+  "#f59e0b", // Amarillo
+  "#ef4444", // Rojo
+  "#8b5cf6", // Púrpura
+  "#06b6d4", // Cian
+  "#84cc16", // Lima
+  "#f97316", // Naranja
 ]
 
 export function CategoryChart({ stats }: CategoryChartProps) {
@@ -31,22 +34,33 @@ export function CategoryChart({ stats }: CategoryChartProps) {
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-              outerRadius={80}
+              label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+              outerRadius={90}
+              innerRadius={40}
               fill="#8884d8"
               dataKey="count"
+              stroke="#ffffff"
+              strokeWidth={2}
             >
               {stats.categories.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={COLORS[index % COLORS.length]}
+                />
               ))}
             </Pie>
             <Tooltip
               contentStyle={{
                 backgroundColor: "hsl(var(--card))",
                 border: "1px solid hsl(var(--border))",
-                borderRadius: "6px",
+                borderRadius: "8px",
                 color: "hsl(var(--foreground))",
+                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)"
               }}
+              formatter={(value: any, name: string) => [
+                `${value} productos`,
+                name
+              ]}
             />
           </PieChart>
         </ResponsiveContainer>
