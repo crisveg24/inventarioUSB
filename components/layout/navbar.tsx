@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { logout } from "@/lib/auth"
-import { BarChart3, Package, Menu, LogOut, Home, User } from "lucide-react"
+import { BarChart3, Package, Menu, LogOut, Home, HelpCircle, User } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useTour } from "@/hooks/use-tour"
 import { useAuth } from "@/hooks/use-auth"
 
 const navigation = [
@@ -16,16 +17,19 @@ const navigation = [
     name: "Dashboard",
     href: "/dashboard",
     icon: Home,
+    tourKey: "sidebar-dashboard"
   },
   {
     name: "Ver Inventario",
     href: "/inventory",
     icon: Package,
+    tourKey: "sidebar-inventory"
   },
   {
     name: "Reportes",
     href: "/reports",
     icon: BarChart3,
+    tourKey: "sidebar-reports"
   },
 ]
 
@@ -33,11 +37,29 @@ export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const { startWelcomeTour, startDashboardTour, startInventoryTour, startReportsTour } = useTour()
   const { user, getUserRoleInfo } = useAuth()
 
   const handleLogout = () => {
     logout()
     router.push("/")
+  }
+
+  const handleHelpClick = () => {
+    // Iniciar tour específico según la página actual
+    switch (pathname) {
+      case '/dashboard':
+        startDashboardTour()
+        break
+      case '/inventory':
+        startInventoryTour()
+        break
+      case '/reports':
+        startReportsTour()
+        break
+      default:
+        startWelcomeTour()
+    }
   }
 
   return (
@@ -63,6 +85,7 @@ export function Navbar() {
                   <Button
                     variant={isActive ? "secondary" : "ghost"}
                     className={cn("flex items-center space-x-2", isActive && "bg-secondary text-secondary-foreground")}
+                    data-tour={item.tourKey}
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.name}</span>
@@ -83,6 +106,16 @@ export function Navbar() {
                 </div>
               </div>
             )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleHelpClick}
+              className="flex items-center space-x-2 bg-transparent"
+              data-tour="help-button"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span>Ayuda</span>
+            </Button>
             <ThemeToggle />
             <Button variant="outline" onClick={handleLogout} className="flex items-center space-x-2 bg-transparent">
               <LogOut className="h-4 w-4" />
@@ -92,6 +125,14 @@ export function Navbar() {
 
           {/* Mobile Menu */}
           <div className="md:hidden flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleHelpClick}
+              className="bg-transparent"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
             <ThemeToggle />
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
@@ -125,6 +166,7 @@ export function Navbar() {
                             "w-full justify-start flex items-center space-x-2",
                             isActive && "bg-secondary text-secondary-foreground",
                           )}
+                          data-tour={item.tourKey}
                         >
                           <item.icon className="h-4 w-4" />
                           <span>{item.name}</span>
@@ -133,7 +175,18 @@ export function Navbar() {
                     )
                   })}
 
-                  <div className="pt-4 border-t border-border">
+                  <div className="pt-4 border-t border-border space-y-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        handleHelpClick()
+                        setIsOpen(false)
+                      }} 
+                      className="w-full justify-start bg-transparent"
+                    >
+                      <HelpCircle className="h-4 w-4 mr-2" />
+                      Ayuda y Tutorial
+                    </Button>
                     <Button variant="outline" onClick={handleLogout} className="w-full justify-start bg-transparent">
                       <LogOut className="h-4 w-4 mr-2" />
                       Cerrar Sesión

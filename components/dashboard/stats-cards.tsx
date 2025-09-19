@@ -41,7 +41,7 @@ export function StatsCards({ stats, isLoading = false }: StatsCardsProps) {
   ]
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-tour="stats-cards">
       {cards.map((card, index) => (
         <Card key={index} className="border-border bg-card hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

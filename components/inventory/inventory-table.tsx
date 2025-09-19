@@ -335,7 +335,7 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
             <p className="text-muted-foreground">Cargando datos del inventario...</p>
           </div>
         ) : (
-          <div className="rounded-md border border-border">
+          <div className="rounded-md border border-border" data-tour="inventory-table">
             <Table>
               <TableHeader>
                 <TableRow className="border-border">
@@ -392,7 +392,7 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
         )}
 
         {!isLoading && totalItems > 0 && (
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-4" data-tour="pagination">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
                 Mostrando {startItem} a {endItem} de {totalItems} activos
