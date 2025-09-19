@@ -7,6 +7,19 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { InventarioActivoOut } from "@/api/types/inventario";
 
+// Tipo para productos retornados por Gemini (formato inventario legacy)
+export interface GeminiInventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  minStock: number;
+  price: number;
+  supplier: string;
+  lastUpdated: string;
+  status: string;
+}
+
 export interface ExportFilters {
   tipoActivo?: string;
   proceso?: string;
@@ -23,6 +36,31 @@ export interface ExportOptions {
   title?: string;
   includeHeaders?: boolean;
   filters?: ExportFilters;
+}
+
+/**
+ * Convierte datos de inventario de Gemini de vuelta al formato de activos para exportación
+ */
+export function convertGeminiInventoryToActivos(inventoryItems: GeminiInventoryItem[]): InventarioActivoOut[] {
+  return inventoryItems.map((item) => ({
+    id: parseInt(item.id),
+    NOMBRE_DEL_ACTIVO: item.name,
+    DESCRIPCION: `Activo ${item.category}`,
+    TIPO_DE_ACTIVO: item.category,
+    MEDIO_DE_CONSERVACIÓN: null,
+    FORMATO: null,
+    IDIOMA: null,
+    PROCESO: item.supplier || null,
+    DUEÑO_DE_ACTIVO: item.supplier || null,
+    TIPO_DE_DATOS_PERSONALES: null,
+    FINALIDAD_DE_LA_RECOLECCIÓN: null,
+    CONFIDENCIALIDAD: item.status === 'out-of-stock' ? 'Alta' : item.status === 'low-stock' ? 'Media' : 'Baja',
+    INTEGRIDAD: 'Media',
+    DISPONIBILIDAD: item.status === 'out-of-stock' ? 'Baja' : item.status === 'low-stock' ? 'Media' : 'Alta',
+    CRITICIDAD_TOTAL_DEL_ACTIVO: item.status === 'out-of-stock' ? 'Alta' : item.status === 'low-stock' ? 'Media' : 'Baja',
+    INFORMACIÓN_PUBLICADA_O_DISPONIBLE: null,
+    LUGAR_DE_CONSULTA: null,
+  }));
 }
 
 /**
@@ -383,5 +421,181 @@ export function generateSummaryReport(data: InventarioActivoOut[]) {
     typeSummary,
     processSummary,
     generatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Exporta datos de Gemini (formato inventario) a Excel
+ */
+export function exportGeminiDataToExcel(
+  inventoryData: GeminiInventoryItem[],
+  options: ExportOptions = {}
+) {
+  const {
+    filename = "reporte_gemini.xlsx",
+    title = "Reporte de IA - Activos de Información",
+    includeHeaders = true,
+  } = options;
+
+  // Convertir datos de inventario a formato de activos
+  const activosData = convertGeminiInventoryToActivos(inventoryData);
+  const exportData = prepareDataForExport(activosData);
+
+  // Crear workbook
+  const wb = XLSX.utils.book_new();
+
+  // Crear worksheet con los datos
+  const ws = XLSX.utils.json_to_sheet(exportData, {
+    header: includeHeaders ? undefined : [],
+  });
+
+  // Agregar título si se especifica
+  if (title && includeHeaders) {
+    XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: "A1" });
+    XLSX.utils.sheet_add_aoa(ws, [[]], { origin: "A2" }); // Línea vacía
+    XLSX.utils.sheet_add_json(ws, exportData, {
+      origin: "A3",
+      skipHeader: false,
+    });
+  }
+
+  // Ajustar ancho de columnas para campos de activos
+  const colWidths = [
+    { wch: 10 }, // ID
+    { wch: 30 }, // Nombre del Activo
+    { wch: 40 }, // Descripción
+    { wch: 20 }, // Tipo de Activo
+    { wch: 25 }, // Medio de Conservación
+    { wch: 15 }, // Formato
+    { wch: 10 }, // Idioma
+    { wch: 20 }, // Proceso
+    { wch: 25 }, // Dueño del Activo
+    { wch: 30 }, // Tipo de Datos Personales
+    { wch: 35 }, // Finalidad de la Recolección
+    { wch: 15 }, // Confidencialidad
+    { wch: 15 }, // Integridad
+    { wch: 15 }, // Disponibilidad
+    { wch: 20 }, // Criticidad Total
+    { wch: 25 }, // Información Publicada
+    { wch: 30 }, // Lugar de Consulta
+  ];
+  ws["!cols"] = colWidths;
+
+  // Agregar worksheet al workbook
+  XLSX.utils.book_append_sheet(wb, ws, "Activos");
+
+  // Generar y descargar archivo
+  XLSX.writeFile(wb, filename);
+
+  return {
+    success: true,
+    message: `Archivo Excel generado: ${filename}`,
+    recordCount: inventoryData.length,
+  };
+}
+
+/**
+ * Exporta datos de Gemini (formato inventario) a PDF
+ */
+export function exportGeminiDataToPDF(
+  inventoryData: GeminiInventoryItem[],
+  options: ExportOptions = {}
+) {
+  const {
+    filename = "reporte_gemini.pdf",
+    title = "Reporte de IA - Activos de Información",
+  } = options;
+
+  // Convertir datos de inventario a formato de activos
+  const activosData = convertGeminiInventoryToActivos(inventoryData);
+  const exportData = prepareDataForExport(activosData);
+
+  // Crear documento PDF
+  const doc = new jsPDF("landscape", "mm", "a4");
+
+  // Configuración del documento
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text(title, 20, 20);
+
+  // Información del reporte
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(
+    `Fecha de generación: ${new Date().toLocaleDateString("es-ES")}`,
+    20,
+    30
+  );
+  doc.text(`Total de registros: ${inventoryData.length}`, 20, 35);
+
+  // Preparar datos para la tabla (campos principales)
+  const tableData = exportData.map((item) => [
+    item.ID,
+    item["Nombre del Activo"] || "",
+    item["Tipo de Activo"] || "",
+    item["Proceso"] || "",
+    item["Criticidad Total"] || "",
+    item["Confidencialidad"] || "",
+    item["Disponibilidad"] || "",
+  ]);
+
+  const headers = [
+    "ID",
+    "Nombre del Activo", 
+    "Tipo",
+    "Proceso",
+    "Criticidad",
+    "Confidencialidad",
+    "Disponibilidad",
+  ];
+
+  // Crear tabla
+  autoTable(doc, {
+    head: [headers],
+    body: tableData,
+    startY: 45,
+    styles: {
+      fontSize: 8,
+      cellPadding: 2,
+    },
+    headStyles: {
+      fillColor: [59, 130, 246], // Azul
+      textColor: 255,
+      fontStyle: "bold",
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252], // Gris claro
+    },
+    columnStyles: {
+      0: { cellWidth: 15 }, // ID
+      1: { cellWidth: 60 }, // Nombre del Activo
+      2: { cellWidth: 30 }, // Tipo
+      3: { cellWidth: 30 }, // Proceso
+      4: { cellWidth: 25 }, // Criticidad
+      5: { cellWidth: 25 }, // Confidencialidad
+      6: { cellWidth: 25 }, // Disponibilidad
+    },
+    margin: { left: 20, right: 20 },
+  });
+
+  // Agregar pie de página
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.text(
+      `Página ${i} de ${pageCount}`,
+      doc.internal.pageSize.width - 40,
+      doc.internal.pageSize.height - 10
+    );
+  }
+
+  // Guardar archivo
+  doc.save(filename);
+
+  return {
+    success: true,
+    message: `Archivo PDF generado: ${filename}`,
+    recordCount: inventoryData.length,
   };
 }

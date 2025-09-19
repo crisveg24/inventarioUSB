@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast"
 import { getInventarioActivos } from "@/api"
 import { mapApiActivoToInventoryItem } from "@/lib/api-mapping"
 import { generateReportWithGemini, validateQuery, getQuerySuggestions, type GeminiReportResponse } from "@/lib/gemini-service"
-import { exportToExcel, exportToPDF } from "@/lib/export-utils"
+import { exportGeminiDataToExcel, exportGeminiDataToPDF } from "@/lib/export-utils"
 import type { InventoryItem } from "@/lib/inventory-data"
 
 interface GeminiReportModalProps {
@@ -124,16 +124,14 @@ export function GeminiReportModal({}: GeminiReportModalProps) {
       const filename = `reporte_gemini_${timestamp}.${format === 'excel' ? 'xlsx' : 'pdf'}`
 
       if (format === 'excel') {
-        await exportToExcel(reportResult.filteredProducts, {
+        await exportGeminiDataToExcel(reportResult.filteredProducts, {
           filename,
           title: reportResult.reportTitle,
-          filters: {} // Los filtros específicos se manejan dentro del modal
         })
       } else {
-        await exportToPDF(reportResult.filteredProducts, {
+        await exportGeminiDataToPDF(reportResult.filteredProducts, {
           filename,
           title: reportResult.reportTitle,
-          filters: {} // Los filtros específicos se manejan dentro del modal
         })
       }
 

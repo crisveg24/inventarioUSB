@@ -8,11 +8,25 @@ interface InventoryChartProps {
 }
 
 export function InventoryChart({ stats }: InventoryChartProps) {
+  // Colores vibrantes para cada barra
+  const colors = [
+    "#3b82f6", // Azul
+    "#10b981", // Verde
+    "#f59e0b", // Amarillo
+    "#ef4444", // Rojo
+    "#8b5cf6", // Púrpura
+    "#06b6d4", // Cian
+    "#84cc16", // Lima
+    "#f97316", // Naranja
+    "#ec4899", // Rosa
+    "#6366f1", // Índigo
+  ]
+
   // Generar datos de distribución por proceso basado en los activos
   const processData = stats.categories?.map((category: any, index: number) => ({
     proceso: category.name,
     activos: category.count,
-    color: `hsl(${index * 45}, 70%, 50%)`
+    fill: colors[index % colors.length] // Asignar color específico
   })) || []
 
   return (
@@ -45,14 +59,18 @@ export function InventoryChart({ stats }: InventoryChartProps) {
               contentStyle={{
                 backgroundColor: "hsl(var(--background))",
                 border: "1px solid hsl(var(--border))",
-                borderRadius: "6px"
+                borderRadius: "6px",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)"
               }}
-              labelStyle={{ color: "hsl(var(--foreground))" }}
-              formatter={(value: any) => [`${value} activos`, 'Cantidad']}
+              labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "500" }}
+              formatter={(value: any, name: string, props: any) => [
+                `${value} activos`, 
+                'Cantidad'
+              ]}
+              labelFormatter={(label) => `Proceso: ${label}`}
             />
             <Bar 
               dataKey="activos" 
-              fill="hsl(var(--primary))"
               radius={[4, 4, 0, 0]}
             />
           </BarChart>

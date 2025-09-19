@@ -37,33 +37,42 @@ export async function generateReportWithGemini(
     const prompt = `IMPORTANTE: Debes responder ÚNICAMENTE con un JSON válido, sin texto adicional.
 
 TAREA: Analizar la consulta del usuario y filtrar los productos del inventario según sus criterios.
-LÍMITE: Devuelve MÁXIMO 20 productos más relevantes para mantener la respuesta concisa.
+LÍMITE: Devuelve MÁXIMO 20 activos más relevantes para mantener la respuesta concisa.
 
 CONSULTA DEL USUARIO: "${request.query}"
 
-DATOS DEL INVENTARIO (${request.inventoryData.length} productos):
+ACTIVOS DE INFORMACIÓN (${request.inventoryData.length} activos):
 ${JSON.stringify(request.inventoryData, null, 2)}
 
 INSTRUCCIONES OBLIGATORIAS:
-1. Analiza la consulta para entender qué productos necesita el usuario
-2. Filtra los productos según los criterios mencionados
+1. Analiza la consulta para entender qué activos necesita el usuario
+2. Filtra los activos según los criterios mencionados
 3. Ordena por relevancia y devuelve solo los 20 más importantes
 4. Responde SOLO con el JSON en esta estructura exacta:
 
 {
-  "filteredProducts": [máximo 20 productos que mejor coincidan con la consulta],
+  "filteredProducts": [máximo 20 activos que mejor coincidan con la consulta],
   "reportTitle": "Título descriptivo del reporte",
   "reportDescription": "Descripción de lo que contiene el reporte",
   "criteria": ["criterio1", "criterio2", "criterio3"]
 }
 
-EJEMPLOS DE FILTRADO:
-- "stock bajo" o "menos stock" = products where quantity <= minStock OR status === "low-stock"
-- "sin stock" = products where quantity === 0 OR status === "out-of-stock"  
-- "categoría electrónicos" = products where category includes "electrón" or "electronic"
-- "precio mayor a X" = products where price > X
+EJEMPLOS DE FILTRADO PARA ACTIVOS DE INFORMACIÓN:
+- "criticidad alta" o "crítico" = activos donde status === "out-of-stock" (representa alta criticidad)
+- "criticidad media" o "disponibilidad limitada" = activos donde status === "low-stock" (criticidad media)
+- "criticidad baja" = activos donde status === "in-stock" (baja criticidad)
+- "tipo software" = activos donde category incluye "Software"
+- "tipo hardware" = activos donde category incluye "Hardware" 
+- "tipo información" = activos donde category incluye "Información"
+- "responsable X" = activos donde supplier incluye la persona mencionada
 
-PRIORIDAD: Para "menos stock" o "stock bajo", prioriza productos con quantity <= minStock y ordena por quantity ascendente.
+MAPEO DE CONCEPTOS PARA ACTIVOS:
+- quantity/minStock/status → Niveles de criticidad y disponibilidad del activo
+- category → Tipo de activo (Software, Hardware, Información)
+- supplier → Responsable o dueño del activo
+- Los términos "stock" se interpretan como "criticidad" o "disponibilidad"
+
+PRIORIDAD: Para consultas de criticidad, ordena por status: "out-of-stock" (crítico), "low-stock" (medio), "in-stock" (bajo).
 
 RESPUESTA (SOLO JSON, SIN EXPLICACIONES):`;
 
@@ -223,12 +232,12 @@ export function validateQuery(query: string): string[] {
 // Función para generar sugerencias de consultas
 export function getQuerySuggestions(): string[] {
   return [
-    "Muéstrame todos los productos con stock bajo",
-    "Dame los productos de la categoría electrónicos con más de 10 unidades",
-    "Productos con precio mayor a $50000 ordenados por valor",
-    "Todos los productos sin stock para reposición urgente",
-    "Productos de oficina con stock entre 5 y 20 unidades",
-    "Los 10 productos más caros del inventario",
-    "Productos agregados en los últimos 30 días",
+    "Muéstrame todos los activos con criticidad alta",
+    "Dame los activos de software con disponibilidad limitada",
+    "Activos de información con confidencialidad alta",
+    "Todos los activos críticos para revisión inmediata",
+    "Activos de hardware administrados por sistemas",
+    "Software con criticidad media ordenados por responsable",
+    "Activos de información del proceso de contabilidad",
   ];
 }
