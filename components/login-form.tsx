@@ -191,13 +191,35 @@ export function LoginForm() {
               {/* Demo Credentials */}
               <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
                 <div className="text-center">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center justify-center">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center justify-center">
                     <Lock className="h-4 w-4 mr-1" />
-                    Credenciales de prueba
+                    Usuarios de Prueba USBBOG
                   </p>
-                  <div className="space-y-1 text-sm">
-                    <p className="font-mono text-blue-600 dark:text-blue-400">Usuario: USBBOG</p>
-                    <p className="font-mono text-blue-600 dark:text-blue-400">Contraseña: usb123#</p>
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <div className="bg-white/50 dark:bg-gray-700/50 p-2 rounded border">
+                      <div className="font-medium text-gray-800 dark:text-gray-200">Admin (Acceso completo)</div>
+                      <div className="font-mono text-blue-600 dark:text-blue-400">admin / admin123</div>
+                    </div>
+                    <div className="bg-white/50 dark:bg-gray-700/50 p-2 rounded border">
+                      <div className="font-medium text-gray-800 dark:text-gray-200">Jefe Oficina de Control Interno</div>
+                      <div className="font-mono text-blue-600 dark:text-blue-400">jefe_oficina / jefe123</div>
+                    </div>
+                    <div className="bg-white/50 dark:bg-gray-700/50 p-2 rounded border">
+                      <div className="font-medium text-gray-800 dark:text-gray-200">Subdirección Financiera</div>
+                      <div className="font-mono text-blue-600 dark:text-blue-400">finanzas / finanzas123</div>
+                    </div>
+                    <div className="bg-white/50 dark:bg-gray-700/50 p-2 rounded border">
+                      <div className="font-medium text-gray-800 dark:text-gray-200">Asesor de la Dirección</div>
+                      <div className="font-mono text-blue-600 dark:text-blue-400">asesor_direccion / direccion123</div>
+                    </div>
+                    <div className="bg-white/50 dark:bg-gray-700/50 p-2 rounded border">
+                      <div className="font-medium text-gray-800 dark:text-gray-200">Control Disciplinario</div>
+                      <div className="font-mono text-blue-600 dark:text-blue-400">oficina_control / control123</div>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded border-2 border-blue-200 dark:border-blue-700">
+                      <div className="font-medium text-blue-800 dark:text-blue-200">Usuario Original</div>
+                      <div className="font-mono text-blue-600 dark:text-blue-400">USBBOG / usb123#</div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useToast } from "@/hooks/use-toast"
 import { createInventarioActivoValidated, updateInventarioActivoValidated } from "@/api"
 import type { InventoryItem } from "@/lib/inventory-data"
+import { useAuth } from "@/hooks/use-auth"
 
 interface InventoryFormProps {
   isOpen: boolean
@@ -21,6 +22,7 @@ interface InventoryFormProps {
 
 export function InventoryForm({ isOpen, onClose, onSave, editingItem }: InventoryFormProps) {
   const { toast } = useToast()
+  const { user, getFilteredOwner } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState<Partial<InventoryItem>>({
     name: "",
@@ -60,7 +62,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
         FORMATO: 'Electrónico',
         IDIOMA: 'Español',
         PROCESO: 'Gestión de Inventario',
-        DUEÑO_DE_ACTIVO: formData.supplier,
+        DUEÑO_DE_ACTIVO: getFilteredOwner() || formData.supplier,
         TIPO_DE_DATOS_PERSONALES: 'No aplica',
         FINALIDAD_DE_LA_RECOLECCIÓN: 'Control de inventario',
         CONFIDENCIALIDAD: 'Media',
@@ -191,16 +193,34 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="supplier">Proveedor</Label>
-            <Input
-              id="supplier"
-              value={formData.supplier || ""}
-              onChange={(e) => handleInputChange("supplier", e.target.value)}
-              placeholder="Ej: Dell Colombia"
-              required
-            />
-          </div>
+          {/* Mostrar el DUEÑO_DE_ACTIVO como campo de solo lectura si el usuario tiene uno asignado */}
+          {getFilteredOwner() && (
+            <div className="space-y-2">
+              <Label>Departamento/Área</Label>
+              <Input
+                value={getFilteredOwner() || ""}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                Este campo está asignado automáticamente según tu rol
+              </p>
+            </div>
+          )}
+          
+          {/* Campo de proveedor solo si no hay owner asignado */}
+          {!getFilteredOwner() && (
+            <div className="space-y-2">
+              <Label htmlFor="supplier">Proveedor</Label>
+              <Input
+                id="supplier"
+                value={formData.supplier || ""}
+                onChange={(e) => handleInputChange("supplier", e.target.value)}
+                placeholder="Ej: Dell Colombia"
+                required
+              />
+            </div>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>

@@ -6,15 +6,17 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Edit, Trash2, Plus, RefreshCw, Search, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
+import { Edit, Trash2, Plus, RefreshCw, Search, AlertCircle, ChevronLeft, ChevronRight, Filter } from "lucide-react"
 import type { InventoryItem } from "@/lib/inventory-data"
 import { formatCurrency } from "@/lib/inventory-data"
-import { getInventarioActivos } from "@/api/get-inventario"
+import { getInventarioActivos, getAllInventarioActivos } from "@/api/get-inventario"
 import { mapApiActivoToInventoryItem } from "@/lib/api-mapping"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { testApiConnection, testBasicConnectivity } from "@/api/test-api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AdvancedFilters, FilterOptions } from "./advanced-filters"
+import { useAuth } from "@/hooks/use-auth"
 
 interface InventoryTableProps {
   onEdit: (item: InventoryItem) => void
@@ -25,6 +27,7 @@ interface InventoryTableProps {
 
 export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: InventoryTableProps) {
   const [items, setItems] = useState<InventoryItem[]>([])
+  const [allItems, setAllItems] = useState<InventoryItem[]>([]) // Para filtros
   const [searchTerm, setSearchTerm] = useState("")
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -35,7 +38,21 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [totalItems, setTotalItems] = useState(0)
   
+  // Estados para filtros avanzados
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [filters, setFilters] = useState<FilterOptions>({
+    searchTerm: "",
+    category: "",
+    status: "",
+    supplier: "",
+    minQuantity: null,
+    maxQuantity: null,
+    minPrice: null,
+    maxPrice: null,
+  })
+  
   const { toast } = useToast()
+  const { user, canCreate, canEdit, canDelete, getFilteredOwner, getUserRoleInfo } = useAuth()
 
   const loadInventoryData = async () => {
     try {
@@ -58,6 +75,17 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
         
         const mappedItems = activosData.map(mapApiActivoToInventoryItem)
         setItems(mappedItems)
+        
+        // Cargar todos los datos para los filtros (sin filtrado por rol)
+        try {
+          const allActivosData = await getAllInventarioActivos({ skip: 0, limit: 1000 })
+          const allMappedItems = allActivosData.map(mapApiActivoToInventoryItem)
+          setAllItems(allMappedItems)
+          console.log(`📊 Datos completos para filtros: ${allMappedItems.length} items`)
+        } catch (allDataError) {
+          console.warn('⚠️ Error al cargar datos completos para filtros:', allDataError)
+          setAllItems(mappedItems) // Usar los datos filtrados como fallback
+        }
         
         // Solo obtener el total en la primera carga o cuando sea necesario
         if (totalItems === 0) {
@@ -143,12 +171,42 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
     }
   }
 
-  const filteredItems = items.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.supplier.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  // Función para aplicar todos los filtros
+  const applyFilters = (items: InventoryItem[]) => {
+    return items.filter((item) => {
+      // Filtro de búsqueda general
+      const searchMatch = !filters.searchTerm || 
+        item.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        item.category.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        item.supplier.toLowerCase().includes(filters.searchTerm.toLowerCase())
+
+      // Filtro por categoría
+      const categoryMatch = !filters.category || item.category === filters.category
+
+      // Filtro por estado
+      const statusMatch = !filters.status || item.status === filters.status
+
+      // Filtro por proveedor
+      const supplierMatch = !filters.supplier || item.supplier === filters.supplier
+
+      // Filtro por cantidad mínima
+      const minQuantityMatch = filters.minQuantity === null || item.quantity >= filters.minQuantity
+
+      // Filtro por cantidad máxima
+      const maxQuantityMatch = filters.maxQuantity === null || item.quantity <= filters.maxQuantity
+
+      // Filtro por precio mínimo
+      const minPriceMatch = filters.minPrice === null || item.price >= filters.minPrice
+
+      // Filtro por precio máximo
+      const maxPriceMatch = filters.maxPrice === null || item.price <= filters.maxPrice
+
+      return searchMatch && categoryMatch && statusMatch && supplierMatch && 
+             minQuantityMatch && maxQuantityMatch && minPriceMatch && maxPriceMatch
+    })
+  }
+
+  const filteredItems = applyFilters(items)
 
   // Cálculos para paginación
   const totalPages = Math.ceil(totalItems / itemsPerPage)
@@ -173,6 +231,26 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
     // loadInventoryData se ejecutará automáticamente por el useEffect cuando itemsPerPage y currentPage cambien
   }
 
+  const handleFiltersChange = (newFilters: FilterOptions) => {
+    setFilters(newFilters)
+    setCurrentPage(1) // Reset a la primera página cuando cambien los filtros
+  }
+
+  const handleClearFilters = () => {
+    setFilters({
+      searchTerm: "",
+      category: "",
+      status: "",
+      supplier: "",
+      minQuantity: null,
+      maxQuantity: null,
+      minPrice: null,
+      maxPrice: null,
+    })
+    setSearchTerm("")
+    setCurrentPage(1)
+  }
+
   const getStatusBadge = (status: InventoryItem["status"]) => {
     switch (status) {
       case "in-stock":
@@ -187,37 +265,60 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
   }
 
   return (
-    <Card className="border-border bg-card">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-foreground">Gestión de Inventario</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button onClick={handleTestConnection} variant="outline" size="sm">
-              🧪 Probar API
-            </Button>
-            <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isRefreshing}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-              Refrescar
-            </Button>
-            <Button onClick={onAdd} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar Producto
+    <div className="space-y-4">
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-foreground">Gestión de Inventario</CardTitle>
+              {getFilteredOwner() && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Mostrando datos de: <span className="font-medium">{getFilteredOwner()}</span>
+                </p>
+              )}
+              {user && (
+                <p className="text-xs text-muted-foreground">
+                  Usuario: {user.username} | Rol: {getUserRoleInfo()?.name}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleTestConnection} variant="outline" size="sm">
+                🧪 Probar API
+              </Button>
+              <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isRefreshing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                Refrescar
+              </Button>
+              {canCreate() && (
+                <Button onClick={onAdd} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar Producto
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar productos..."
+                value={filters.searchTerm}
+                onChange={(e) => handleFiltersChange({ ...filters, searchTerm: e.target.value })}
+                className="pl-8"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtros
             </Button>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-2 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar productos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-        </div>
 
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -265,12 +366,16 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => onDelete(item)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canEdit() && (
+                        <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDelete() && (
+                        <Button variant="outline" size="sm" onClick={() => onDelete(item)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -356,7 +461,18 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Filtros Avanzados */}
+      {showAdvancedFilters && (
+        <AdvancedFilters
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onClearFilters={handleClearFilters}
+          items={allItems}
+        />
+      )}
+    </div>
   )
 }
