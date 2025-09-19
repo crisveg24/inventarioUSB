@@ -4,7 +4,7 @@
  */
 
 import { getInventarioActivos } from "./get-inventario";
-import { API_CONFIG, buildApiUrl } from "./config";
+import { API_CONFIG, buildApiUrl, safeFetch } from "./config";
 
 /**
  * Función de prueba para verificar la conexión con la API
@@ -64,13 +64,8 @@ export async function testBasicConnectivity() {
     });
     console.log("🧪 Probando conectividad básica a:", url);
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      mode: "cors",
-    });
+    // Usar safeFetch para manejar problemas de CORS automáticamente
+    const response = await safeFetch(url, 10000);
 
     console.log("📊 Status:", response.status);
     console.log("📋 Headers:", Object.fromEntries(response.headers.entries()));
@@ -81,19 +76,70 @@ export async function testBasicConnectivity() {
         "📄 Respuesta (primeros 200 caracteres):",
         text.substring(0, 200)
       );
-      return { success: true, status: response.status };
+      
+      // Intentar parsear como JSON
+      try {
+        const json = JSON.parse(text);
+        return { 
+          success: true, 
+          status: response.status,
+          dataType: Array.isArray(json) ? 'array' : typeof json,
+          dataLength: Array.isArray(json) ? json.length : Object.keys(json).length,
+          method: 'safeFetch'
+        };
+      } catch (parseError) {
+        return { 
+          success: true, 
+          status: response.status,
+          warning: "Respuesta no es JSON válido",
+          responsePreview: text.substring(0, 100),
+          method: 'safeFetch'
+        };
+      }
     } else {
+      const errorText = await response.text();
       return {
         success: false,
         status: response.status,
         statusText: response.statusText,
+        errorBody: errorText.substring(0, 200),
+        method: 'safeFetch'
       };
     }
   } catch (error) {
     console.error("❌ Error de conectividad:", error);
+    
+    let errorType = "unknown";
+    let errorMessage = error instanceof Error ? error.message : "Error desconocido";
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorType = "timeout";
+        errorMessage = "La solicitud tardó más de 10 segundos";
+      } else if (error.message.includes('CORS')) {
+        errorType = "cors";
+        errorMessage = "Error de CORS - El servidor no permite solicitudes desde este origen";
+      } else if (error.message.includes('Failed to fetch')) {
+        errorType = "network";
+        errorMessage = "Error de red - No se pudo conectar con el servidor";
+      } else if (error.message.includes('refused')) {
+        errorType = "connection_refused";
+        errorMessage = "Conexión rechazada - El servidor no está disponible";
+      } else if (error.message.includes('ERR_INVALID_REDIRECT')) {
+        errorType = "invalid_redirect";
+        errorMessage = "Error de redirección CORS - Problema de configuración del servidor";
+      }
+    }
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Error desconocido",
+      error: errorMessage,
+      errorType,
+      method: 'safeFetch',
+      details: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+      } : error
     };
   }
 }

@@ -47,42 +47,61 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
       const skip = (currentPage - 1) * itemsPerPage
       console.log(`📊 Parámetros: skip=${skip}, limit=${itemsPerPage}`)
       
-      // Cargar solo los datos de la página actual
-      const activosData = await getInventarioActivos({ 
-        skip: skip, 
-        limit: itemsPerPage 
-      })
-      
-      console.log(`✅ Datos recibidos: ${activosData.length} items para la página ${currentPage}`)
-      
-      const mappedItems = activosData.map(mapApiActivoToInventoryItem)
-      setItems(mappedItems)
-      
-      // Solo obtener el total en la primera carga o cuando sea necesario
-      // En una API real, esto debería venir en la respuesta de paginación
-      if (totalItems === 0) {
-        try {
-          console.log('🔍 Obteniendo total de items...')
-          // Hacer una consulta para obtener solo el primer elemento y estimar el total
-          // o usar un endpoint específico para contar
-          const allItems = await getInventarioActivos({ skip: 0, limit: 1000 })
-          const total = allItems.length
-          setTotalItems(total)
-          console.log(`📈 Total de items: ${total}`)
-        } catch (totalError) {
-          console.warn('⚠️ Error al obtener total, usando estimación:', totalError)
-          // Estimar el total basado en si la página actual está llena
-          if (activosData.length === itemsPerPage) {
-            // Si la página actual está llena, probablemente hay más páginas
-            setTotalItems(currentPage * itemsPerPage + 1)
-          } else {
-            // Si la página actual no está llena, es la última página
-            setTotalItems((currentPage - 1) * itemsPerPage + activosData.length)
+      try {
+        // Intentar cargar datos de la API
+        const activosData = await getInventarioActivos({ 
+          skip: skip, 
+          limit: itemsPerPage 
+        })
+        
+        console.log(`✅ Datos recibidos de API: ${activosData.length} items para la página ${currentPage}`)
+        
+        const mappedItems = activosData.map(mapApiActivoToInventoryItem)
+        setItems(mappedItems)
+        
+        // Solo obtener el total en la primera carga o cuando sea necesario
+        if (totalItems === 0) {
+          try {
+            console.log('🔍 Obteniendo total de items...')
+            const allItems = await getInventarioActivos({ skip: 0, limit: 1000 })
+            const total = allItems.length
+            setTotalItems(total)
+            console.log(`📈 Total de items: ${total}`)
+          } catch (totalError) {
+            console.warn('⚠️ Error al obtener total, usando estimación:', totalError)
+            if (activosData.length === itemsPerPage) {
+              setTotalItems(currentPage * itemsPerPage + 1)
+            } else {
+              setTotalItems((currentPage - 1) * itemsPerPage + activosData.length)
+            }
           }
         }
+      } catch (apiError) {
+        console.warn('⚠️ API no disponible, usando datos de demostración:', apiError)
+        
+        // Usar datos mock como fallback
+        const { mockInventoryData } = await import('@/lib/inventory-data')
+        
+        // Aplicar paginación a los datos mock
+        const startIndex = skip
+        const endIndex = skip + itemsPerPage
+        const mockItems = mockInventoryData.slice(startIndex, endIndex)
+        
+        setItems(mockItems)
+        setTotalItems(mockInventoryData.length)
+        
+        // Mostrar advertencia al usuario
+        setError('⚠️ Usando datos de demostración - La API no está disponible en este momento')
+        toast({
+          title: "Modo Demostración",
+          description: "La API no está disponible. Mostrando datos de ejemplo.",
+          variant: "default",
+        })
+        
+        console.log(`🎭 Usando datos mock: ${mockItems.length} items de ${mockInventoryData.length} totales`)
       }
     } catch (err) {
-      console.error('❌ Error al cargar inventario:', err)
+      console.error('❌ Error crítico al cargar inventario:', err)
       const errorMessage = err instanceof Error ? err.message : 'Error al cargar los datos del inventario'
       setError(errorMessage)
       toast({
