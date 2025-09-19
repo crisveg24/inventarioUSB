@@ -196,11 +196,17 @@ export default function DashboardPage() {
           <StatsCards stats={stats} isLoading={isLoading} />
 
           <div className="grid gap-6 md:grid-cols-2">
-            <InventoryChart stats={stats} />
-            <CategoryChart stats={stats} />
+            <div data-tour="inventory-chart">
+              <InventoryChart stats={stats} />
+            </div>
+            <div data-tour="category-chart">
+              <CategoryChart stats={stats} />
+            </div>
           </div>
 
-          <TopItemsTable stats={stats} />
+          <div data-tour="top-items">
+            <TopItemsTable stats={stats} />
+          </div>
         </div>
       </AppLayout>
     </AuthGuard>

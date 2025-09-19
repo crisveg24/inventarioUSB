@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
 import "./globals.css"
+import "driver.js/dist/driver.css"
 
 export const metadata: Metadata = {
   title: "Sistema de Inventarios - USBBOG",

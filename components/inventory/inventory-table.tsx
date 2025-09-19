@@ -192,14 +192,14 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
         <div className="flex items-center justify-between">
           <CardTitle className="text-foreground">Gestión de Inventario</CardTitle>
           <div className="flex items-center gap-2">
-            <Button onClick={handleTestConnection} variant="outline" size="sm">
+            <Button onClick={handleTestConnection} variant="outline" size="sm" data-tour="api-test">
               🧪 Probar API
             </Button>
-            <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isRefreshing}>
+            <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isRefreshing} data-tour="refresh-btn">
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
               Refrescar
             </Button>
-            <Button onClick={onAdd} size="sm">
+            <Button onClick={onAdd} size="sm" data-tour="add-product">
               <Plus className="h-4 w-4 mr-2" />
               Agregar Producto
             </Button>
@@ -208,7 +208,7 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
       </CardHeader>
       <CardContent>
         <div className="flex items-center space-x-2 mb-4">
-          <div className="relative flex-1">
+          <div className="relative flex-1" data-tour="search-box">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar productos..."
@@ -234,7 +234,7 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
             <p className="text-muted-foreground">Cargando datos del inventario...</p>
           </div>
         ) : (
-          <div className="rounded-md border border-border">
+          <div className="rounded-md border border-border" data-tour="inventory-table">
             <Table>
               <TableHeader>
                 <TableRow className="border-border">
@@ -264,7 +264,7 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
                   <TableCell className="text-muted-foreground">{item.supplier}</TableCell>
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" data-tour="action-buttons">
                       <Button variant="outline" size="sm" onClick={() => onEdit(item)}>
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -287,7 +287,7 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
         )}
 
         {!isLoading && totalItems > 0 && (
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-4" data-tour="pagination">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
                 Mostrando {startItem} a {endItem} de {totalItems} activos

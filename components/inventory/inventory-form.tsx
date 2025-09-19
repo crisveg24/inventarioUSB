@@ -126,7 +126,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-2" data-tour="form-name">
               <Label htmlFor="name">Nombre del Producto</Label>
               <Input
                 id="name"
@@ -136,7 +136,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
                 required
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2" data-tour="form-category">
               <Label htmlFor="category">Categoría</Label>
               <Select value={formData.category || ""} onValueChange={(value) => handleInputChange("category", value)}>
                 <SelectTrigger>
@@ -154,7 +154,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-2" data-tour="form-quantity">
               <Label htmlFor="quantity">Cantidad</Label>
               <Input
                 id="quantity"
@@ -165,7 +165,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
                 required
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2" data-tour="form-minstock">
               <Label htmlFor="minStock">Stock Mínimo</Label>
               <Input
                 id="minStock"
@@ -178,7 +178,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="form-price">
             <Label htmlFor="price">Precio (COP)</Label>
             <Input
               id="price"
@@ -191,7 +191,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="form-supplier">
             <Label htmlFor="supplier">Proveedor</Label>
             <Input
               id="supplier"
@@ -202,7 +202,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
             />
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
+          <div className="flex justify-end space-x-2 pt-4" data-tour="form-buttons">
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancelar
             </Button>
