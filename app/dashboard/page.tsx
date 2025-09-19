@@ -15,40 +15,57 @@ import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { InventoryItem, InventoryStats } from "@/lib/inventory-data"
 
-// Función para calcular estadísticas reales de los datos de la API
-function calculateRealStats(items: InventoryItem[]): InventoryStats {
-  const totalItems = items.length
-  const totalValue = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-  const lowStockItems = items.filter(item => item.status === 'low-stock').length
-  const outOfStockItems = items.filter(item => item.status === 'out-of-stock').length
+// Función para calcular estadísticas reales de los activos
+function calculateRealStats(activos: any[]): any {
+  const totalItems = activos.length
+  
+  // Métricas basadas en criticidad
+  const criticalAssets = activos.filter(item => 
+    item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes('alto')
+  ).length
+  
+  const lowAvailabilityAssets = activos.filter(item => 
+    item.DISPONIBILIDAD?.toLowerCase().includes('bajo')
+  ).length
+  
+  const highConfidentialityAssets = activos.filter(item => 
+    item.CONFIDENCIALIDAD?.toLowerCase().includes('alto')
+  ).length
 
-  // Agrupar por categorías
-  const categoryMap = new Map<string, { count: number; value: number }>()
-  items.forEach(item => {
-    const existing = categoryMap.get(item.category) || { count: 0, value: 0 }
-    categoryMap.set(item.category, {
-      count: existing.count + 1,
-      value: existing.value + (item.price * item.quantity)
+  // Agrupar por tipo de activo
+  const categoryMap = new Map<string, { count: number }>()
+  activos.forEach(item => {
+    const category = item.TIPO_DE_ACTIVO || 'Sin tipo'
+    const existing = categoryMap.get(category) || { count: 0 }
+    categoryMap.set(category, {
+      count: existing.count + 1
     })
   })
 
   const categories = Array.from(categoryMap.entries()).map(([name, data]) => ({
     name,
     count: data.count,
-    value: data.value
+    value: data.count // Usar conteo como valor
   }))
 
-  // Top items por valor
-  const topItems = items
+  // Top activos por criticidad
+  const topItems = activos
+    .filter(item => item.NOMBRE_DEL_ACTIVO)
     .map(item => ({
-      name: item.name,
-      quantity: item.quantity,
-      value: item.price * item.quantity
+      name: item.NOMBRE_DEL_ACTIVO,
+      type: item.TIPO_DE_ACTIVO || 'Sin tipo',
+      criticality: item.CRITICIDAD_TOTAL_DEL_ACTIVO || 'Sin datos',
+      process: item.PROCESO || 'Sin proceso'
     }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 5)
+    .slice(0, 10)
 
-  // Movimiento mensual simulado (podrías expandir esto con datos reales de fechas)
+  // Movimiento por proceso (simulado basado en datos reales)
+  const processMap = new Map<string, number>()
+  activos.forEach(item => {
+    const process = item.PROCESO || 'Sin proceso'
+    processMap.set(process, (processMap.get(process) || 0) + 1)
+  })
+
   const monthlyMovement = [
     { month: 'Ene', inbound: Math.floor(totalItems * 0.1), outbound: Math.floor(totalItems * 0.08) },
     { month: 'Feb', inbound: Math.floor(totalItems * 0.12), outbound: Math.floor(totalItems * 0.09) },
@@ -60,9 +77,10 @@ function calculateRealStats(items: InventoryItem[]): InventoryStats {
 
   return {
     totalItems,
-    totalValue,
-    lowStockItems,
-    outOfStockItems,
+    totalValue: totalItems, // Usar total de activos como valor
+    criticalAssets,
+    lowAvailabilityAssets,
+    highConfidentialityAssets,
     categories,
     monthlyMovement,
     topItems
@@ -79,26 +97,16 @@ export default function DashboardPage() {
     setError(null)
     
     try {
-      console.log('🔄 Cargando datos del dashboard...')
+      console.log('Cargando datos del dashboard...')
+      const activos = await getInventarioActivos({ limit: 1000 })
+      console.log('Activos cargados:', activos.length)
       
-      // Obtener todos los datos para calcular estadísticas
-      const activosData = await getInventarioActivos({ limit: 1000 }) // Obtener todos los items
-      
-      console.log('📊 Datos obtenidos:', activosData.length, 'items')
-      
-      // Mapear datos de la API al formato interno
-      const mappedItems = activosData.map(mapApiActivoToInventoryItem)
-      
-      // Calcular estadísticas reales
-      const realStats = calculateRealStats(mappedItems)
-      
-      setStats(realStats)
-      console.log('✅ Dashboard cargado exitosamente')
+      const calculatedStats = calculateRealStats(activos)
+      setStats(calculatedStats)
       
     } catch (error) {
-      console.error('❌ Error al cargar dashboard:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      setError(`Error al cargar datos del dashboard: ${errorMessage}`)
+      console.error('Error al cargar datos del dashboard:', error)
+      setError(error instanceof Error ? error.message : 'Error al cargar los datos')
     } finally {
       setIsLoading(false)
     }

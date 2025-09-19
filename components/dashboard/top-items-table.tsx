@@ -1,12 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Trophy, Medal, Award } from "lucide-react"
-import type { InventoryStats } from "@/lib/inventory-data"
-import { formatCurrency } from "@/lib/inventory-data"
+import { Trophy, Medal, Award, AlertTriangle, Shield, Zap } from "lucide-react"
 
 interface TopItemsTableProps {
-  stats: InventoryStats
+  stats: any
 }
 
 export function TopItemsTable({ stats }: TopItemsTableProps) {
@@ -23,16 +21,16 @@ export function TopItemsTable({ stats }: TopItemsTableProps) {
     }
   }
 
-  const getRankBadge = (index: number) => {
-    switch (index) {
-      case 0:
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">1º</Badge>
-      case 1:
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">2º</Badge>
-      case 2:
-        return <Badge className="bg-amber-100 text-amber-800 border-amber-200">3º</Badge>
-      default:
-        return <Badge variant="outline">{index + 1}º</Badge>
+  const getCriticalityBadge = (criticality: string) => {
+    const crit = criticality?.toLowerCase() || 'sin datos'
+    if (crit.includes('alto')) {
+      return <Badge className="bg-red-100 text-red-800 border-red-200"><AlertTriangle className="h-3 w-3 mr-1" />Alto</Badge>
+    } else if (crit.includes('medio')) {
+      return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200"><Zap className="h-3 w-3 mr-1" />Medio</Badge>
+    } else if (crit.includes('bajo')) {
+      return <Badge className="bg-green-100 text-green-800 border-green-200"><Shield className="h-3 w-3 mr-1" />Bajo</Badge>
+    } else {
+      return <Badge variant="outline">Sin datos</Badge>
     }
   }
 
@@ -41,10 +39,10 @@ export function TopItemsTable({ stats }: TopItemsTableProps) {
       <CardHeader>
         <CardTitle className="text-foreground flex items-center gap-2">
           <Trophy className="h-5 w-5 text-yellow-500" />
-          Productos de Mayor Valor
+          Activos Principales
         </CardTitle>
         <CardDescription className="text-muted-foreground">
-          Top 5 productos por valor total en inventario
+          Lista de activos en el inventario por tipo y criticidad
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -52,43 +50,41 @@ export function TopItemsTable({ stats }: TopItemsTableProps) {
           <TableHeader>
             <TableRow className="border-border">
               <TableHead className="text-muted-foreground w-16">Ranking</TableHead>
-              <TableHead className="text-muted-foreground">Producto</TableHead>
-              <TableHead className="text-muted-foreground text-center">Cantidad</TableHead>
-              <TableHead className="text-muted-foreground text-right">Valor Total</TableHead>
+              <TableHead className="text-muted-foreground">Activo</TableHead>
+              <TableHead className="text-muted-foreground text-center">Tipo</TableHead>
+              <TableHead className="text-muted-foreground text-center">Criticidad</TableHead>
+              <TableHead className="text-muted-foreground text-center">Proceso</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {stats.topItems.map((item, index) => (
+            {stats.topItems?.map((item: any, index: number) => (
               <TableRow key={index} className="border-border hover:bg-muted/50 transition-colors">
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     {getRankIcon(index)}
-                    {getRankBadge(index)}
                   </div>
                 </TableCell>
                 <TableCell className="font-medium text-foreground">
                   <div className="flex flex-col">
                     <span className="font-semibold">{item.name}</span>
-                    <span className="text-xs text-muted-foreground">ID: {index + 1}</span>
+                    <span className="text-xs text-muted-foreground">Activo #{index + 1}</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
                   <Badge variant="secondary" className="font-mono">
-                    {item.quantity}
+                    {item.type}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex flex-col items-end">
-                    <span className="font-bold text-lg text-foreground">
-                      {formatCurrency(item.value)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatCurrency(item.value / item.quantity)}/unidad
-                    </span>
-                  </div>
+                <TableCell className="text-center">
+                  {getCriticalityBadge(item.criticality)}
+                </TableCell>
+                <TableCell className="text-center">
+                  <span className="text-sm font-medium">
+                    {item.process}
+                  </span>
                 </TableCell>
               </TableRow>
-            ))}
+            )) || []}
           </TableBody>
         </Table>
       </CardContent>

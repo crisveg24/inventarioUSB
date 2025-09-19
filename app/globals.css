@@ -141,17 +141,17 @@
 
 /* Modern Login Animations */
 @keyframes blob {
-  0% { 
-    transform: translate(0px, 0px) scale(1); 
+  0% {
+    transform: translate(0px, 0px) scale(1);
   }
-  33% { 
-    transform: translate(30px, -50px) scale(1.1); 
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
   }
-  66% { 
-    transform: translate(-20px, 20px) scale(0.9); 
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
   }
-  100% { 
-    transform: translate(0px, 0px) scale(1); 
+  100% {
+    transform: translate(0px, 0px) scale(1);
   }
 }
 
@@ -167,14 +167,15 @@
 }
 
 @keyframes shake {
-  0%, 100% { 
-    transform: translateX(0); 
+  0%,
+  100% {
+    transform: translateX(0);
   }
-  25% { 
-    transform: translateX(-5px); 
+  25% {
+    transform: translateX(-5px);
   }
-  75% { 
-    transform: translateX(5px); 
+  75% {
+    transform: translateX(5px);
   }
 }
 
@@ -212,7 +213,11 @@
 }
 
 .bg-grid-pattern {
-  background-image: radial-gradient(circle, rgba(100,116,139,0.1) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    rgba(100, 116, 139, 0.1) 1px,
+    transparent 1px
+  );
   background-size: 20px 20px;
 }
 
@@ -251,4 +256,28 @@
   100% {
     background-position: 0% 50%;
   }
+}
+
+/* Estilos personalizados para el chatbot */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+  background-color: rgb(209 213 219);
+  border-radius: 6px;
+}
+
+.scrollbar-track-gray-100::-webkit-scrollbar-track {
+  background-color: rgb(243 244 246);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chatbot-message {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }

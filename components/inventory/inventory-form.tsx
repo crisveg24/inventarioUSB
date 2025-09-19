@@ -8,40 +8,63 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { createInventarioActivoValidated, updateInventarioActivoValidated } from "@/api"
-import type { InventoryItem } from "@/lib/inventory-data"
+import { InventarioActivoOut, InventarioActivoCreate } from "@/api/types/inventario"
 
 interface InventoryFormProps {
   isOpen: boolean
   onClose: () => void
-  onSave: () => void // Cambiado para solo notificar que se guardó
-  editingItem?: InventoryItem | null
+  onSave: () => void
+  editingItem?: InventarioActivoOut | null
 }
 
 export function InventoryForm({ isOpen, onClose, onSave, editingItem }: InventoryFormProps) {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState<Partial<InventoryItem>>({
-    name: "",
-    category: "",
-    quantity: 0,
-    minStock: 0,
-    price: 0,
-    supplier: "",
+  const [formData, setFormData] = useState<Partial<InventarioActivoCreate>>({
+    NOMBRE_DEL_ACTIVO: "",
+    DESCRIPCION: "",
+    TIPO_DE_ACTIVO: "",
+    PROCESO: "",
+    DUEÑO_DE_ACTIVO: "",
+    CONFIDENCIALIDAD: "",
+    DISPONIBILIDAD: "",
+    INTEGRIDAD: "",
+    CRITICIDAD_TOTAL_DEL_ACTIVO: "",
+    FORMATO: "",
+    MEDIO_DE_CONSERVACIÓN: "",
   })
 
   useEffect(() => {
     if (editingItem) {
-      setFormData(editingItem)
+      setFormData({
+        NOMBRE_DEL_ACTIVO: editingItem.NOMBRE_DEL_ACTIVO || "",
+        DESCRIPCION: editingItem.DESCRIPCION || "",
+        TIPO_DE_ACTIVO: editingItem.TIPO_DE_ACTIVO || "",
+        PROCESO: editingItem.PROCESO || "",
+        DUEÑO_DE_ACTIVO: editingItem.DUEÑO_DE_ACTIVO || "",
+        CONFIDENCIALIDAD: editingItem.CONFIDENCIALIDAD || "",
+        DISPONIBILIDAD: editingItem.DISPONIBILIDAD || "",
+        INTEGRIDAD: editingItem.INTEGRIDAD || "",
+        CRITICIDAD_TOTAL_DEL_ACTIVO: editingItem.CRITICIDAD_TOTAL_DEL_ACTIVO || "",
+        FORMATO: editingItem.FORMATO || "",
+        MEDIO_DE_CONSERVACIÓN: editingItem.MEDIO_DE_CONSERVACIÓN || "",
+      })
     } else {
       setFormData({
-        name: "",
-        category: "",
-        quantity: 0,
-        minStock: 0,
-        price: 0,
-        supplier: "",
+        NOMBRE_DEL_ACTIVO: "",
+        DESCRIPCION: "",
+        TIPO_DE_ACTIVO: "",
+        PROCESO: "",
+        DUEÑO_DE_ACTIVO: "",
+        CONFIDENCIALIDAD: "Bajo",
+        DISPONIBILIDAD: "Medio",
+        INTEGRIDAD: "Medio",
+        CRITICIDAD_TOTAL_DEL_ACTIVO: "Bajo",
+        FORMATO: "Digital",
+        MEDIO_DE_CONSERVACIÓN: "Digital",
       })
     }
   }, [editingItem, isOpen])
@@ -51,42 +74,39 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
     setIsLoading(true)
 
     try {
-      // Mapear los datos del formulario al formato de la API
-      const apiData = {
-        NOMBRE_DEL_ACTIVO: formData.name,
-        DESCRIPCION: `Producto: ${formData.name}`,
-        TIPO_DE_ACTIVO: formData.category,
-        MEDIO_DE_CONSERVACIÓN: 'Digital',
-        FORMATO: 'Electrónico',
+      // Crear objeto con datos del API directamente
+      const apiData: InventarioActivoCreate = {
+        NOMBRE_DEL_ACTIVO: formData.NOMBRE_DEL_ACTIVO,
+        DESCRIPCION: formData.DESCRIPCION,
+        TIPO_DE_ACTIVO: formData.TIPO_DE_ACTIVO,
+        MEDIO_DE_CONSERVACIÓN: formData.MEDIO_DE_CONSERVACIÓN || 'Digital',
+        FORMATO: formData.FORMATO || 'Digital',
         IDIOMA: 'Español',
-        PROCESO: 'Gestión de Inventario',
-        DUEÑO_DE_ACTIVO: formData.supplier,
+        PROCESO: formData.PROCESO,
+        DUEÑO_DE_ACTIVO: formData.DUEÑO_DE_ACTIVO,
         TIPO_DE_DATOS_PERSONALES: 'No aplica',
-        FINALIDAD_DE_LA_RECOLECCIÓN: 'Control de inventario',
-        CONFIDENCIALIDAD: 'Media',
-        INTEGRIDAD: 'Alta',
-        DISPONIBILIDAD: formData.quantity && formData.quantity > (formData.minStock || 0) ? 'Alta' : 
-                       formData.quantity && formData.quantity > 0 ? 'Media' : 'Baja',
-        CRITICIDAD_TOTAL_DEL_ACTIVO: formData.quantity && formData.quantity <= 5 ? 'Alta' :
-                                    formData.quantity && formData.quantity <= 15 ? 'Media' : 'Baja',
+        FINALIDAD_DE_LA_RECOLECCIÓN: 'Gestión de inventario',
+        CONFIDENCIALIDAD: formData.CONFIDENCIALIDAD,
+        INTEGRIDAD: formData.INTEGRIDAD,
+        DISPONIBILIDAD: formData.DISPONIBILIDAD,
+        CRITICIDAD_TOTAL_DEL_ACTIVO: formData.CRITICIDAD_TOTAL_DEL_ACTIVO,
         INFORMACIÓN_PUBLICADA_O_DISPONIBLE: 'No',
         LUGAR_DE_CONSULTA: 'Sistema de inventario',
       }
 
       if (editingItem) {
         // Actualizar item existente
-        const itemId = Number.parseInt(editingItem.id) || 0
-        await updateInventarioActivoValidated(itemId, apiData)
+        await updateInventarioActivoValidated(editingItem.id, apiData)
         toast({
-          title: "Producto actualizado",
-          description: "El producto se ha actualizado exitosamente.",
+          title: "Activo actualizado",
+          description: "El activo se ha actualizado exitosamente.",
         })
       } else {
         // Crear nuevo item
         await createInventarioActivoValidated(apiData)
         toast({
-          title: "Producto creado",
-          description: "El producto se ha agregado exitosamente al inventario.",
+          title: "Activo creado",
+          description: "El activo se ha agregado exitosamente al inventario.",
         })
       }
 
@@ -95,12 +115,12 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
       onSave() // Notificar que se guardó para recargar la tabla
       onClose()
     } catch (error) {
-      console.error('Error al guardar producto:', error)
+      console.error('Error al guardar activo:', error)
       toast({
         title: "Error",
         description: editingItem 
-          ? "No se pudo actualizar el producto. Intenta nuevamente." 
-          : "No se pudo crear el producto. Intenta nuevamente.",
+          ? "No se pudo actualizar el activo. Intenta nuevamente." 
+          : "No se pudo crear el activo. Intenta nuevamente.",
         variant: "destructive",
       })
     } finally {
@@ -108,7 +128,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
     }
   }
 
-  const handleInputChange = (field: keyof InventoryItem, value: string | number) => {
+  const handleInputChange = (field: keyof InventarioActivoCreate, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -125,81 +145,174 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Nombre del Activo */}
+          <div className="space-y-2">
+            <Label htmlFor="nombre">Nombre del Activo *</Label>
+            <Input
+              id="nombre"
+              value={formData.NOMBRE_DEL_ACTIVO || ""}
+              onChange={(e) => handleInputChange("NOMBRE_DEL_ACTIVO", e.target.value)}
+              placeholder="Ej: Laptop Dell Inspiron"
+              required
+            />
+          </div>
+
+          {/* Descripción */}
+          <div className="space-y-2">
+            <Label htmlFor="descripcion">Descripción</Label>
+            <Textarea
+              id="descripcion"
+              value={formData.DESCRIPCION || ""}
+              onChange={(e) => handleInputChange("DESCRIPCION", e.target.value)}
+              placeholder="Descripción detallada del activo"
+              rows={3}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
+            {/* Tipo de Activo */}
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre del Producto</Label>
-              <Input
-                id="name"
-                value={formData.name || ""}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                placeholder="Ej: Laptop Dell"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="category">Categoría</Label>
-              <Select value={formData.category || ""} onValueChange={(value) => handleInputChange("category", value)}>
+              <Label htmlFor="tipo">Tipo de Activo *</Label>
+              <Select value={formData.TIPO_DE_ACTIVO || ""} onValueChange={(value) => handleInputChange("TIPO_DE_ACTIVO", value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar categoría" />
+                  <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Electrónicos">Electrónicos</SelectItem>
-                  <SelectItem value="Accesorios">Accesorios</SelectItem>
-                  <SelectItem value="Oficina">Oficina</SelectItem>
+                  <SelectItem value="Activo de información">Activo de información</SelectItem>
+                  <SelectItem value="Activo físico">Activo físico</SelectItem>
                   <SelectItem value="Software">Software</SelectItem>
-                  <SelectItem value="Mobiliario">Mobiliario</SelectItem>
+                  <SelectItem value="Hardware">Hardware</SelectItem>
+                  <SelectItem value="Documentos">Documentos</SelectItem>
+                  <SelectItem value="Base de datos">Base de datos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Proceso */}
+            <div className="space-y-2">
+              <Label htmlFor="proceso">Proceso *</Label>
+              <Select value={formData.PROCESO || ""} onValueChange={(value) => handleInputChange("PROCESO", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar proceso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Gestión de IT">Gestión de IT</SelectItem>
+                  <SelectItem value="Recursos Humanos">Recursos Humanos</SelectItem>
+                  <SelectItem value="Finanzas">Finanzas</SelectItem>
+                  <SelectItem value="Operaciones">Operaciones</SelectItem>
+                  <SelectItem value="Administrativo">Administrativo</SelectItem>
+                  <SelectItem value="Seguridad">Seguridad</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Dueño del Activo */}
+          <div className="space-y-2">
+            <Label htmlFor="dueno">Dueño del Activo *</Label>
+            <Input
+              id="dueno"
+              value={formData.DUEÑO_DE_ACTIVO || ""}
+              onChange={(e) => handleInputChange("DUEÑO_DE_ACTIVO", e.target.value)}
+              placeholder="Ej: Juan Pérez, Departamento IT"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            {/* Confidencialidad */}
+            <div className="space-y-2">
+              <Label htmlFor="confidencialidad">Confidencialidad</Label>
+              <Select value={formData.CONFIDENCIALIDAD || ""} onValueChange={(value) => handleInputChange("CONFIDENCIALIDAD", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nivel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bajo">Bajo</SelectItem>
+                  <SelectItem value="Medio">Medio</SelectItem>
+                  <SelectItem value="Alto">Alto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Disponibilidad */}
+            <div className="space-y-2">
+              <Label htmlFor="disponibilidad">Disponibilidad</Label>
+              <Select value={formData.DISPONIBILIDAD || ""} onValueChange={(value) => handleInputChange("DISPONIBILIDAD", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nivel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bajo">Bajo</SelectItem>
+                  <SelectItem value="Medio">Medio</SelectItem>
+                  <SelectItem value="Alto">Alto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Integridad */}
+            <div className="space-y-2">
+              <Label htmlFor="integridad">Integridad</Label>
+              <Select value={formData.INTEGRIDAD || ""} onValueChange={(value) => handleInputChange("INTEGRIDAD", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nivel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bajo">Bajo</SelectItem>
+                  <SelectItem value="Medio">Medio</SelectItem>
+                  <SelectItem value="Alto">Alto</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            {/* Criticidad */}
             <div className="space-y-2">
-              <Label htmlFor="quantity">Cantidad</Label>
-              <Input
-                id="quantity"
-                type="number"
-                value={formData.quantity || 0}
-                onChange={(e) => handleInputChange("quantity", Number.parseInt(e.target.value) || 0)}
-                min="0"
-                required
-              />
+              <Label htmlFor="criticidad">Criticidad Total</Label>
+              <Select value={formData.CRITICIDAD_TOTAL_DEL_ACTIVO || ""} onValueChange={(value) => handleInputChange("CRITICIDAD_TOTAL_DEL_ACTIVO", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nivel de criticidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bajo">Bajo</SelectItem>
+                  <SelectItem value="Medio">Medio</SelectItem>
+                  <SelectItem value="Alto">Alto</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Formato */}
             <div className="space-y-2">
-              <Label htmlFor="minStock">Stock Mínimo</Label>
-              <Input
-                id="minStock"
-                type="number"
-                value={formData.minStock || 0}
-                onChange={(e) => handleInputChange("minStock", Number.parseInt(e.target.value) || 0)}
-                min="0"
-                required
-              />
+              <Label htmlFor="formato">Formato</Label>
+              <Select value={formData.FORMATO || ""} onValueChange={(value) => handleInputChange("FORMATO", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de formato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Digital">Digital</SelectItem>
+                  <SelectItem value="Físico">Físico</SelectItem>
+                  <SelectItem value="Híbrido">Híbrido</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
+          {/* Medio de Conservación */}
           <div className="space-y-2">
-            <Label htmlFor="price">Precio (COP)</Label>
-            <Input
-              id="price"
-              type="number"
-              value={formData.price || 0}
-              onChange={(e) => handleInputChange("price", Number.parseInt(e.target.value) || 0)}
-              min="0"
-              step="1000"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="supplier">Proveedor</Label>
-            <Input
-              id="supplier"
-              value={formData.supplier || ""}
-              onChange={(e) => handleInputChange("supplier", e.target.value)}
-              placeholder="Ej: Dell Colombia"
-              required
-            />
+            <Label htmlFor="medio">Medio de Conservación</Label>
+            <Select value={formData.MEDIO_DE_CONSERVACIÓN || ""} onValueChange={(value) => handleInputChange("MEDIO_DE_CONSERVACIÓN", value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar medio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Digital">Digital</SelectItem>
+                <SelectItem value="Físico">Físico</SelectItem>
+                <SelectItem value="Nube">Nube</SelectItem>
+                <SelectItem value="Servidor local">Servidor local</SelectItem>
+                <SelectItem value="Archivo físico">Archivo físico</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
@@ -207,7 +320,7 @@ export function InventoryForm({ isOpen, onClose, onSave, editingItem }: Inventor
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? (editingItem ? "Actualizando..." : "Agregando...") : (editingItem ? "Actualizar" : "Agregar")}
+              {isLoading ? (editingItem ? "Actualizando..." : "Creando...") : (editingItem ? "Actualizar Activo" : "Crear Activo")}
             </Button>
           </div>
         </form>

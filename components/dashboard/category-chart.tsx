@@ -23,8 +23,8 @@ export function CategoryChart({ stats }: CategoryChartProps) {
   return (
     <Card className="border-border bg-card">
       <CardHeader>
-        <CardTitle className="text-foreground">Distribución por Categoría</CardTitle>
-        <CardDescription className="text-muted-foreground">Cantidad de productos por categoría</CardDescription>
+        <CardTitle className="text-foreground">Distribución por Tipo de Activo</CardTitle>
+        <CardDescription className="text-muted-foreground">Cantidad de activos por tipo</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -58,7 +58,7 @@ export function CategoryChart({ stats }: CategoryChartProps) {
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)"
               }}
               formatter={(value: any, name: string) => [
-                `${value} productos`,
+                `${value} activos`,
                 name
               ]}
             />

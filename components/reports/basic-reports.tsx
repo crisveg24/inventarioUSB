@@ -5,13 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { FileText, Download, TrendingUp, Package, AlertTriangle, Loader2, RefreshCw } from "lucide-react"
+import { FileText, Download, TrendingUp, Package, AlertTriangle, Loader2, RefreshCw, Shield, Eye } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { getInventarioActivos } from "@/api"
-import { mapApiActivoToInventoryItem } from "@/lib/api-mapping"
 import { exportToExcel, exportToPDF } from "@/lib/export-utils"
 import { GeminiReportModal } from "./gemini-report-modal"
-import type { InventoryItem } from "@/lib/inventory-data"
+import { InventarioActivoOut } from "@/api/types/inventario"
 
 interface ReportData {
   id: string
@@ -21,12 +20,12 @@ interface ReportData {
   status: string
   statusColor: "default" | "destructive" | "secondary"
   items: number
-  data: InventoryItem[]
-  filterFn: (items: InventoryItem[]) => InventoryItem[]
+  data: InventarioActivoOut[]
+  filterFn: (items: InventarioActivoOut[]) => InventarioActivoOut[]
 }
 
 export function BasicReports() {
-  const [inventoryData, setInventoryData] = useState<InventoryItem[]>([])
+  const [inventoryData, setInventoryData] = useState<InventarioActivoOut[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isExporting, setIsExporting] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -40,9 +39,8 @@ export function BasicReports() {
     try {
       console.log('🔄 Cargando datos para reportes básicos...')
       const activosData = await getInventarioActivos({ limit: 1000 })
-      const mappedItems = activosData.map(mapApiActivoToInventoryItem)
-      setInventoryData(mappedItems)
-      console.log('✅ Datos cargados:', mappedItems.length, 'items')
+      setInventoryData(activosData)
+      console.log('✅ Datos cargados:', activosData.length, 'activos')
     } catch (error) {
       console.error('❌ Error al cargar datos:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -56,40 +54,40 @@ export function BasicReports() {
     loadInventoryData()
   }, [])
 
-  // Configuración de reportes con datos reales
-  const getReports = (data: InventoryItem[]): ReportData[] => [
+  // Configuración de reportes con datos reales del API
+  const getReports = (data: InventarioActivoOut[]): ReportData[] => [
     {
-      id: "low-stock",
-      title: "Reporte de Stock Bajo",
-      description: "Productos con inventario por debajo del stock mínimo",
+      id: "critical-assets",
+      title: "Activos de Alta Criticidad",
+      description: "Activos con criticidad alta que requieren atención especial",
       icon: AlertTriangle,
-      status: data.filter(item => item.status === 'low-stock' || item.status === 'out-of-stock').length > 0 ? "Crítico" : "Normal",
-      statusColor: data.filter(item => item.status === 'low-stock' || item.status === 'out-of-stock').length > 0 ? "destructive" : "secondary",
-      items: data.filter(item => item.status === 'low-stock' || item.status === 'out-of-stock').length,
+      status: data.filter(item => item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes('alto')).length > 0 ? "Crítico" : "Normal",
+      statusColor: data.filter(item => item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes('alto')).length > 0 ? "destructive" : "secondary",
+      items: data.filter(item => item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes('alto')).length,
       data,
-      filterFn: (items) => items.filter(item => item.status === 'low-stock' || item.status === 'out-of-stock')
+      filterFn: (items) => items.filter(item => item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes('alto'))
     },
     {
-      id: "by-category",
-      title: "Inventario por Categorías",
-      description: "Distribución de productos por categoría y valor total",
+      id: "by-type",
+      title: "Activos por Tipo",
+      description: "Distribución de activos por tipo y proceso",
       icon: Package,
       status: "Disponible",
       statusColor: "default",
-      items: [...new Set(data.map(item => item.category))].length,
+      items: [...new Set(data.map(item => item.TIPO_DE_ACTIVO))].length,
       data,
-      filterFn: (items) => items // Sin filtro, todos los items agrupados por categoría
+      filterFn: (items) => items // Sin filtro, todos los items agrupados por tipo
     },
     {
-      id: "high-value",
-      title: "Productos de Alto Valor",
-      description: "Productos con mayor valor unitario y total en inventario",
-      icon: TrendingUp,
-      status: "Actualizado",
-      statusColor: "secondary",
-      items: data.filter(item => item.price * item.quantity > 100000).length, // Productos con valor total > 100k
+      id: "high-confidentiality",
+      title: "Activos de Alta Confidencialidad",
+      description: "Activos con nivel de confidencialidad alto",
+      icon: Shield,
+      status: data.filter(item => item.CONFIDENCIALIDAD?.toLowerCase().includes('alto')).length > 0 ? "Disponible" : "Sin datos",
+      statusColor: "default",
+      items: data.filter(item => item.CONFIDENCIALIDAD?.toLowerCase().includes('alto')).length,
       data,
-      filterFn: (items) => items.filter(item => item.price * item.quantity > 100000).sort((a, b) => (b.price * b.quantity) - (a.price * a.quantity))
+      filterFn: (items) => items.filter(item => item.CONFIDENCIALIDAD?.toLowerCase().includes('alto'))
     },
   ]
 
@@ -103,17 +101,21 @@ export function BasicReports() {
 
       let result
       if (format === 'excel') {
-        result = exportToExcel(filteredData, {
-          filename,
-          title: report.title,
-          filters: {}
+        // TODO: Actualizar export-utils para usar InventarioActivoOut
+        toast({
+          title: "Función en desarrollo",
+          description: "La exportación a Excel se actualizará pronto para usar los nuevos campos del API.",
+          variant: "destructive"
         })
+        return
       } else {
-        result = exportToPDF(filteredData, {
-          filename,
-          title: report.title,
-          filters: {}
+        // TODO: Actualizar export-utils para usar InventarioActivoOut  
+        toast({
+          title: "Función en desarrollo", 
+          description: "La exportación a PDF se actualizará pronto para usar los nuevos campos del API.",
+          variant: "destructive"
         })
+        return
       }
 
       toast({
@@ -294,25 +296,25 @@ export function BasicReports() {
         <CardContent className="space-y-3">
           <div className="space-y-2">
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Total productos:</span>
+              <span className="text-sm text-muted-foreground">Total activos:</span>
               <span className="font-medium">{inventoryData.length}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">En stock:</span>
-              <span className="font-medium text-green-600">
-                {inventoryData.filter(item => item.status === 'in-stock').length}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Stock bajo:</span>
-              <span className="font-medium text-yellow-600">
-                {inventoryData.filter(item => item.status === 'low-stock').length}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Sin stock:</span>
+              <span className="text-sm text-muted-foreground">Alta criticidad:</span>
               <span className="font-medium text-red-600">
-                {inventoryData.filter(item => item.status === 'out-of-stock').length}
+                {inventoryData.filter(item => item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes('alto')).length}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Alta confidencialidad:</span>
+              <span className="font-medium text-blue-600">
+                {inventoryData.filter(item => item.CONFIDENCIALIDAD?.toLowerCase().includes('alto')).length}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Baja disponibilidad:</span>
+              <span className="font-medium text-yellow-600">
+                {inventoryData.filter(item => item.DISPONIBILIDAD?.toLowerCase().includes('bajo')).length}
               </span>
             </div>
           </div>

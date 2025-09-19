@@ -1,42 +1,40 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Package, TrendingUp, AlertTriangle, XCircle } from "lucide-react"
-import type { InventoryStats } from "@/lib/inventory-data"
-import { formatCurrency } from "@/lib/inventory-data"
+import { Package, Shield, AlertTriangle, Eye } from "lucide-react"
 
 interface StatsCardsProps {
-  stats: InventoryStats
+  stats: any
   isLoading?: boolean
 }
 
 export function StatsCards({ stats, isLoading = false }: StatsCardsProps) {
   const cards = [
     {
-      title: "Total Items",
-      value: stats.totalItems.toLocaleString(),
-      description: "Productos en inventario",
+      title: "Total Activos",
+      value: stats.totalItems?.toLocaleString() || "0",
+      description: "Activos en el inventario",
       icon: Package,
       color: "text-blue-500",
     },
     {
-      title: "Valor Total",
-      value: formatCurrency(stats.totalValue),
-      description: "Valor del inventario",
-      icon: TrendingUp,
-      color: "text-green-500",
+      title: "Criticidad Alta",
+      value: stats.criticalAssets?.toString() || "0",
+      description: "Activos de alta criticidad",
+      icon: AlertTriangle,
+      color: "text-red-500",
     },
     {
-      title: "Stock Bajo",
-      value: stats.lowStockItems.toString(),
-      description: "Productos con stock bajo",
+      title: "Baja Disponibilidad",
+      value: stats.lowAvailabilityAssets?.toString() || "0",
+      description: "Activos con baja disponibilidad",
       icon: AlertTriangle,
       color: "text-yellow-500",
     },
     {
-      title: "Sin Stock",
-      value: stats.outOfStockItems.toString(),
-      description: "Productos agotados",
-      icon: XCircle,
-      color: "text-red-500",
+      title: "Alta Confidencialidad",
+      value: stats.highConfidentialityAssets?.toString() || "0",
+      description: "Activos confidenciales",
+      icon: Shield,
+      color: "text-green-500",
     },
   ]
 

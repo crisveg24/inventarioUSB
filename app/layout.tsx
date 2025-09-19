@@ -4,6 +4,8 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
+import { FloatingChatBot } from "@/components/chatbot/floating-chatbot"
+import { Toaster } from "@/components/ui/toaster"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -30,7 +32,9 @@ export default function RootLayout({
             storageKey="usbbog-theme"
           >
             {children}
+            <FloatingChatBot />
           </ThemeProvider>
+          <Toaster />
           <Analytics />
         </Suspense>
       </body>

@@ -2,216 +2,264 @@
  * Utilidades para exportar datos a diferentes formatos
  */
 
-import * as XLSX from 'xlsx'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import type { InventoryItem } from './inventory-data'
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { InventarioActivoOut } from "@/api/types/inventario";
 
 export interface ExportFilters {
-  category?: string
-  status?: string
-  stockRange?: {
-    min: number
-    max: number
-  }
-  dateRange?: {
-    from: Date
-    to: Date
-  }
-  limit?: number
-  offset?: number
+  tipoActivo?: string;
+  proceso?: string;
+  criticidad?: string;
+  confidencialidad?: string;
+  disponibilidad?: string;
+  integridad?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface ExportOptions {
-  filename?: string
-  title?: string
-  includeHeaders?: boolean
-  filters?: ExportFilters
+  filename?: string;
+  title?: string;
+  includeHeaders?: boolean;
+  filters?: ExportFilters;
 }
 
 /**
  * Filtra los datos según los criterios especificados
  */
-export function filterInventoryData(data: InventoryItem[], filters: ExportFilters): InventoryItem[] {
-  let filteredData = [...data]
+export function filterInventoryData(
+  data: InventarioActivoOut[],
+  filters: ExportFilters
+): InventarioActivoOut[] {
+  let filteredData = [...data];
 
-  // Filtrar por categoría
-  if (filters.category && filters.category !== 'all') {
-    filteredData = filteredData.filter(item => item.category === filters.category)
+  // Filtrar por tipo de activo
+  if (filters.tipoActivo && filters.tipoActivo !== "all") {
+    filteredData = filteredData.filter(
+      (item) => item.TIPO_DE_ACTIVO === filters.tipoActivo
+    );
   }
 
-  // Filtrar por estado
-  if (filters.status && filters.status !== 'all') {
-    filteredData = filteredData.filter(item => item.status === filters.status)
+  // Filtrar por proceso
+  if (filters.proceso && filters.proceso !== "all") {
+    filteredData = filteredData.filter(
+      (item) => item.PROCESO === filters.proceso
+    );
   }
 
-  // Filtrar por rango de stock
-  if (filters.stockRange) {
-    filteredData = filteredData.filter(item => 
-      item.quantity >= filters.stockRange!.min && 
-      item.quantity <= filters.stockRange!.max
-    )
+  // Filtrar por criticidad
+  if (filters.criticidad && filters.criticidad !== "all") {
+    filteredData = filteredData.filter((item) =>
+      item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes(
+        filters.criticidad!.toLowerCase()
+      )
+    );
   }
 
-  // Filtrar por rango de fechas (basado en lastUpdated)
-  if (filters.dateRange) {
-    filteredData = filteredData.filter(item => {
-      const itemDate = new Date(item.lastUpdated)
-      return itemDate >= filters.dateRange!.from && itemDate <= filters.dateRange!.to
-    })
+  // Filtrar por confidencialidad
+  if (filters.confidencialidad && filters.confidencialidad !== "all") {
+    filteredData = filteredData.filter((item) =>
+      item.CONFIDENCIALIDAD?.toLowerCase().includes(
+        filters.confidencialidad!.toLowerCase()
+      )
+    );
+  }
+
+  // Filtrar por disponibilidad
+  if (filters.disponibilidad && filters.disponibilidad !== "all") {
+    filteredData = filteredData.filter((item) =>
+      item.DISPONIBILIDAD?.toLowerCase().includes(
+        filters.disponibilidad!.toLowerCase()
+      )
+    );
+  }
+
+  // Filtrar por integridad
+  if (filters.integridad && filters.integridad !== "all") {
+    filteredData = filteredData.filter((item) =>
+      item.INTEGRIDAD?.toLowerCase().includes(filters.integridad!.toLowerCase())
+    );
   }
 
   // Aplicar paginación
   if (filters.offset !== undefined) {
-    filteredData = filteredData.slice(filters.offset)
+    filteredData = filteredData.slice(filters.offset);
   }
 
   if (filters.limit !== undefined) {
-    filteredData = filteredData.slice(0, filters.limit)
+    filteredData = filteredData.slice(0, filters.limit);
   }
 
-  return filteredData
+  return filteredData;
 }
 
 /**
  * Prepara los datos para exportación con formato legible
  */
-export function prepareDataForExport(data: InventoryItem[]) {
-  return data.map(item => ({
-    'ID': item.id,
-    'Nombre del Producto': item.name,
-    'Categoría': item.category,
-    'Cantidad': item.quantity,
-    'Stock Mínimo': item.minStock,
-    'Precio': item.price,
-    'Proveedor': item.supplier,
-    'Estado': item.status === 'in-stock' ? 'En Stock' : 
-             item.status === 'low-stock' ? 'Stock Bajo' : 'Sin Stock',
-    'Valor Total': item.price * item.quantity,
-    'Última Actualización': item.lastUpdated
-  }))
+export function prepareDataForExport(data: InventarioActivoOut[]) {
+  return data.map((item) => ({
+    ID: item.id,
+    "Nombre del Activo": item.NOMBRE_DEL_ACTIVO,
+    Descripción: item.DESCRIPCION,
+    "Tipo de Activo": item.TIPO_DE_ACTIVO,
+    "Medio de Conservación": item.MEDIO_DE_CONSERVACIÓN,
+    Formato: item.FORMATO,
+    Idioma: item.IDIOMA,
+    Proceso: item.PROCESO,
+    "Dueño del Activo": item.DUEÑO_DE_ACTIVO,
+    "Tipo de Datos Personales": item.TIPO_DE_DATOS_PERSONALES,
+    "Finalidad de la Recolección": item.FINALIDAD_DE_LA_RECOLECCIÓN,
+    Confidencialidad: item.CONFIDENCIALIDAD,
+    Integridad: item.INTEGRIDAD,
+    Disponibilidad: item.DISPONIBILIDAD,
+    "Criticidad Total": item.CRITICIDAD_TOTAL_DEL_ACTIVO,
+    "Información Publicada": item.INFORMACIÓN_PUBLICADA_O_DISPONIBLE,
+    "Lugar de Consulta": item.LUGAR_DE_CONSULTA,
+  }));
 }
 
 /**
  * Exporta datos a Excel
  */
-export function exportToExcel(data: InventoryItem[], options: ExportOptions = {}) {
+export function exportToExcel(
+  data: InventarioActivoOut[],
+  options: ExportOptions = {}
+) {
   const {
-    filename = 'reporte_inventario.xlsx',
-    title = 'Reporte de Inventario',
+    filename = "reporte_activos.xlsx",
+    title = "Reporte de Activos de Información",
     includeHeaders = true,
-    filters = {}
-  } = options
+    filters = {},
+  } = options;
 
   // Filtrar datos
-  const filteredData = filterInventoryData(data, filters)
-  const exportData = prepareDataForExport(filteredData)
+  const filteredData = filterInventoryData(data, filters);
+  const exportData = prepareDataForExport(filteredData);
 
   // Crear workbook
-  const wb = XLSX.utils.book_new()
-  
+  const wb = XLSX.utils.book_new();
+
   // Crear worksheet con los datos
-  const ws = XLSX.utils.json_to_sheet(exportData, { 
-    header: includeHeaders ? undefined : []
-  })
+  const ws = XLSX.utils.json_to_sheet(exportData, {
+    header: includeHeaders ? undefined : [],
+  });
 
   // Agregar título si se especifica
   if (title && includeHeaders) {
-    XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: 'A1' })
-    XLSX.utils.sheet_add_aoa(ws, [[]], { origin: 'A2' }) // Línea vacía
-    XLSX.utils.sheet_add_json(ws, exportData, { 
-      origin: 'A3',
-      skipHeader: false
-    })
+    XLSX.utils.sheet_add_aoa(ws, [[title]], { origin: "A1" });
+    XLSX.utils.sheet_add_aoa(ws, [[]], { origin: "A2" }); // Línea vacía
+    XLSX.utils.sheet_add_json(ws, exportData, {
+      origin: "A3",
+      skipHeader: false,
+    });
   }
 
-  // Ajustar ancho de columnas
+  // Ajustar ancho de columnas para campos de activos
   const colWidths = [
-    { wch: 15 }, // ID
-    { wch: 30 }, // Nombre
-    { wch: 20 }, // Categoría
-    { wch: 10 }, // Cantidad
-    { wch: 15 }, // Stock Mínimo
-    { wch: 15 }, // Precio
-    { wch: 25 }, // Proveedor
-    { wch: 15 }, // Estado
-    { wch: 15 }, // Valor Total
-    { wch: 20 }  // Última Actualización
-  ]
-  ws['!cols'] = colWidths
+    { wch: 10 }, // ID
+    { wch: 30 }, // Nombre del Activo
+    { wch: 40 }, // Descripción
+    { wch: 20 }, // Tipo de Activo
+    { wch: 25 }, // Medio de Conservación
+    { wch: 15 }, // Formato
+    { wch: 10 }, // Idioma
+    { wch: 20 }, // Proceso
+    { wch: 25 }, // Dueño del Activo
+    { wch: 30 }, // Tipo de Datos Personales
+    { wch: 35 }, // Finalidad de la Recolección
+    { wch: 15 }, // Confidencialidad
+    { wch: 15 }, // Integridad
+    { wch: 15 }, // Disponibilidad
+    { wch: 20 }, // Criticidad Total
+    { wch: 25 }, // Información Publicada
+    { wch: 30 }, // Lugar de Consulta
+  ];
+  ws["!cols"] = colWidths;
 
   // Agregar worksheet al workbook
-  XLSX.utils.book_append_sheet(wb, ws, 'Inventario')
+  XLSX.utils.book_append_sheet(wb, ws, "Activos");
 
   // Generar y descargar archivo
-  XLSX.writeFile(wb, filename)
+  XLSX.writeFile(wb, filename);
 
   return {
     success: true,
     message: `Archivo Excel generado: ${filename}`,
-    recordCount: filteredData.length
-  }
+    recordCount: filteredData.length,
+  };
 }
 
 /**
  * Exporta datos a PDF
  */
-export function exportToPDF(data: InventoryItem[], options: ExportOptions = {}) {
+export function exportToPDF(
+  data: InventarioActivoOut[],
+  options: ExportOptions = {}
+) {
   const {
-    filename = 'reporte_inventario.pdf',
-    title = 'Reporte de Inventario',
-    filters = {}
-  } = options
+    filename = "reporte_activos.pdf",
+    title = "Reporte de Activos de Información",
+    filters = {},
+  } = options;
 
   // Filtrar datos
-  const filteredData = filterInventoryData(data, filters)
-  const exportData = prepareDataForExport(filteredData)
+  const filteredData = filterInventoryData(data, filters);
+  const exportData = prepareDataForExport(filteredData);
 
   // Crear documento PDF
-  const doc = new jsPDF('landscape', 'mm', 'a4')
+  const doc = new jsPDF("landscape", "mm", "a4");
 
   // Configuración del documento
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.text(title, 20, 20)
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text(title, 20, 20);
 
   // Información del reporte
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-ES')}`, 20, 30)
-  doc.text(`Total de registros: ${filteredData.length}`, 20, 35)
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(
+    `Fecha de generación: ${new Date().toLocaleDateString("es-ES")}`,
+    20,
+    30
+  );
+  doc.text(`Total de registros: ${filteredData.length}`, 20, 35);
 
   // Agregar filtros aplicados
-  let yPosition = 40
-  if (filters.category && filters.category !== 'all') {
-    doc.text(`Categoría: ${filters.category}`, 20, yPosition)
-    yPosition += 5
+  let yPosition = 40;
+  if (filters.tipoActivo && filters.tipoActivo !== "all") {
+    doc.text(`Tipo de Activo: ${filters.tipoActivo}`, 20, yPosition);
+    yPosition += 5;
   }
-  if (filters.status && filters.status !== 'all') {
-    doc.text(`Estado: ${filters.status}`, 20, yPosition)
-    yPosition += 5
+  if (filters.proceso && filters.proceso !== "all") {
+    doc.text(`Proceso: ${filters.proceso}`, 20, yPosition);
+    yPosition += 5;
+  }
+  if (filters.criticidad && filters.criticidad !== "all") {
+    doc.text(`Criticidad: ${filters.criticidad}`, 20, yPosition);
+    yPosition += 5;
   }
 
-  // Preparar datos para la tabla
-  const tableData = exportData.map(item => [
+  // Preparar datos para la tabla (campos principales)
+  const tableData = exportData.map((item) => [
     item.ID,
-    item['Nombre del Producto'],
-    item['Categoría'],
-    item.Cantidad.toString(),
-    `$${item.Precio.toLocaleString()}`,
-    item.Estado,
-    `$${item['Valor Total'].toLocaleString()}`
-  ])
+    item["Nombre del Activo"] || "",
+    item["Tipo de Activo"] || "",
+    item["Proceso"] || "",
+    item["Criticidad Total"] || "",
+    item["Confidencialidad"] || "",
+    item["Disponibilidad"] || "",
+  ]);
 
   const headers = [
-    'ID',
-    'Producto',
-    'Categoría', 
-    'Cantidad',
-    'Precio',
-    'Estado',
-    'Valor Total'
-  ]
+    "ID",
+    "Nombre del Activo",
+    "Tipo",
+    "Proceso",
+    "Criticidad",
+    "Confidencialidad",
+    "Disponibilidad",
+  ];
 
   // Crear tabla
   autoTable(doc, {
@@ -220,83 +268,120 @@ export function exportToPDF(data: InventoryItem[], options: ExportOptions = {}) 
     startY: yPosition + 10,
     styles: {
       fontSize: 8,
-      cellPadding: 2
+      cellPadding: 2,
     },
     headStyles: {
       fillColor: [59, 130, 246], // Azul
       textColor: 255,
-      fontStyle: 'bold'
+      fontStyle: "bold",
     },
     alternateRowStyles: {
-      fillColor: [248, 250, 252] // Gris claro
+      fillColor: [248, 250, 252], // Gris claro
     },
     columnStyles: {
-      0: { cellWidth: 25 }, // ID
-      1: { cellWidth: 50 }, // Producto
-      2: { cellWidth: 30 }, // Categoría
-      3: { cellWidth: 20, halign: 'center' }, // Cantidad
-      4: { cellWidth: 25, halign: 'right' }, // Precio
-      5: { cellWidth: 25, halign: 'center' }, // Estado
-      6: { cellWidth: 30, halign: 'right' }  // Valor Total
+      0: { cellWidth: 15 }, // ID
+      1: { cellWidth: 60 }, // Nombre del Activo
+      2: { cellWidth: 30 }, // Tipo
+      3: { cellWidth: 30 }, // Proceso
+      4: { cellWidth: 25 }, // Criticidad
+      5: { cellWidth: 25 }, // Confidencialidad
+      6: { cellWidth: 25 }, // Disponibilidad
     },
-    margin: { left: 20, right: 20 }
-  })
+    margin: { left: 20, right: 20 },
+  });
 
   // Agregar pie de página
-  const pageCount = doc.getNumberOfPages()
+  const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i)
-    doc.setFontSize(8)
+    doc.setPage(i);
+    doc.setFontSize(8);
     doc.text(
       `Página ${i} de ${pageCount}`,
       doc.internal.pageSize.width - 40,
       doc.internal.pageSize.height - 10
-    )
+    );
   }
 
   // Guardar archivo
-  doc.save(filename)
+  doc.save(filename);
 
   return {
     success: true,
     message: `Archivo PDF generado: ${filename}`,
-    recordCount: filteredData.length
-  }
+    recordCount: filteredData.length,
+  };
 }
 
 /**
  * Genera reporte de resumen ejecutivo
  */
-export function generateSummaryReport(data: InventoryItem[]) {
-  const totalItems = data.length
-  const totalValue = data.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-  const lowStockItems = data.filter(item => item.status === 'low-stock').length
-  const outOfStockItems = data.filter(item => item.status === 'out-of-stock').length
+export function generateSummaryReport(data: InventarioActivoOut[]) {
+  const totalItems = data.length;
 
-  // Agrupar por categorías
-  const categorySummary = data.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = {
+  // Contar por criticidad
+  const criticalItems = data.filter(
+    (item) =>
+      item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes("alta") ||
+      item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes("crítica")
+  ).length;
+
+  // Contar por confidencialidad
+  const highConfidentialityItems = data.filter(
+    (item) =>
+      item.CONFIDENCIALIDAD?.toLowerCase().includes("alta") ||
+      item.CONFIDENCIALIDAD?.toLowerCase().includes("confidencial")
+  ).length;
+
+  // Contar por disponibilidad baja
+  const lowAvailabilityItems = data.filter(
+    (item) =>
+      item.DISPONIBILIDAD?.toLowerCase().includes("baja") ||
+      item.DISPONIBILIDAD?.toLowerCase().includes("limitada")
+  ).length;
+
+  // Agrupar por tipo de activo
+  const typeSummary = data.reduce((acc, item) => {
+    const type = item.TIPO_DE_ACTIVO || "Sin tipo";
+    if (!acc[type]) {
+      acc[type] = {
         count: 0,
-        value: 0,
-        lowStock: 0
-      }
+        critical: 0,
+        highConfidentiality: 0,
+      };
     }
-    acc[item.category].count++
-    acc[item.category].value += item.price * item.quantity
-    if (item.status === 'low-stock' || item.status === 'out-of-stock') {
-      acc[item.category].lowStock++
+    acc[type].count++;
+    if (
+      item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes("alta") ||
+      item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes("crítica")
+    ) {
+      acc[type].critical++;
     }
-    return acc
-  }, {} as Record<string, { count: number; value: number; lowStock: number }>)
+    if (
+      item.CONFIDENCIALIDAD?.toLowerCase().includes("alta") ||
+      item.CONFIDENCIALIDAD?.toLowerCase().includes("confidencial")
+    ) {
+      acc[type].highConfidentiality++;
+    }
+    return acc;
+  }, {} as Record<string, { count: number; critical: number; highConfidentiality: number }>);
+
+  // Agrupar por proceso
+  const processSummary = data.reduce((acc, item) => {
+    const process = item.PROCESO || "Sin proceso";
+    if (!acc[process]) {
+      acc[process] = { count: 0 };
+    }
+    acc[process].count++;
+    return acc;
+  }, {} as Record<string, { count: number }>);
 
   return {
     totalItems,
-    totalValue,
-    lowStockItems,
-    outOfStockItems,
-    averageItemValue: totalValue / totalItems,
-    categorySummary,
-    generatedAt: new Date().toISOString()
-  }
+    criticalItems,
+    highConfidentialityItems,
+    lowAvailabilityItems,
+    typeSummary,
+    processSummary,
+    generatedAt: new Date().toISOString(),
+  };
 }

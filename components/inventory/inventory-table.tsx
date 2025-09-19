@@ -7,24 +7,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Edit, Trash2, Plus, RefreshCw, Search, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
-import type { InventoryItem } from "@/lib/inventory-data"
-import { formatCurrency } from "@/lib/inventory-data"
 import { getInventarioActivos } from "@/api/get-inventario"
-import { mapApiActivoToInventoryItem } from "@/lib/api-mapping"
+import { InventarioActivoOut } from "@/api/types/inventario"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { testApiConnection, testBasicConnectivity } from "@/api/test-api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface InventoryTableProps {
-  onEdit: (item: InventoryItem) => void
+  onEdit: (item: InventarioActivoOut) => void
   onAdd: () => void
-  onDelete: (item: InventoryItem) => void
+  onDelete: (item: InventarioActivoOut) => void
   refreshKey?: number // Nueva prop para forzar recarga
 }
 
 export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: InventoryTableProps) {
-  const [items, setItems] = useState<InventoryItem[]>([])
+  const [items, setItems] = useState<InventarioActivoOut[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -55,8 +53,8 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
       
       console.log(`✅ Datos recibidos: ${activosData.length} items para la página ${currentPage}`)
       
-      const mappedItems = activosData.map(mapApiActivoToInventoryItem)
-      setItems(mappedItems)
+      // Usar datos directamente sin mapeo
+      setItems(activosData)
       
       // Solo obtener el total en la primera carga o cuando sea necesario
       // En una API real, esto debería venir en la respuesta de paginación
@@ -124,14 +122,17 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
     }
   }
 
-  const filteredItems = items.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.supplier.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  // Cálculos para paginación
+  const filteredItems = items.filter((item) =>
+    (item.NOMBRE_DEL_ACTIVO?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (item.TIPO_DE_ACTIVO?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (item.PROCESO?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (item.DUEÑO_DE_ACTIVO?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (item.DESCRIPCION?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (item.CONFIDENCIALIDAD?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (item.FORMATO?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (item.MEDIO_DE_CONSERVACIÓN?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false),
+  )  // Cálculos para paginación
   const totalPages = Math.ceil(totalItems / itemsPerPage)
   const startItem = (currentPage - 1) * itemsPerPage + 1
   const endItem = Math.min(currentPage * itemsPerPage, totalItems)
@@ -154,16 +155,20 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
     // loadInventoryData se ejecutará automáticamente por el useEffect cuando itemsPerPage y currentPage cambien
   }
 
-  const getStatusBadge = (status: InventoryItem["status"]) => {
-    switch (status) {
-      case "in-stock":
-        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">En Stock</Badge>
-      case "low-stock":
-        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Stock Bajo</Badge>
-      case "out-of-stock":
-        return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Sin Stock</Badge>
-      default:
-        return <Badge>Desconocido</Badge>
+  const getStatusBadge = (criticidad: string | null | undefined) => {
+    if (!criticidad) {
+      return <Badge variant="secondary">Sin clasificar</Badge>
+    }
+
+    const crit = criticidad.toLowerCase()
+    if (crit.includes("alto") || crit.includes("crítico")) {
+      return <Badge variant="destructive">Crítico</Badge>
+    } else if (crit.includes("medio")) {
+      return <Badge variant="default">Medio</Badge>
+    } else if (crit.includes("bajo")) {
+      return <Badge variant="secondary">Bajo</Badge>
+    } else {
+      return <Badge variant="outline">{criticidad}</Badge>
     }
   }
 
@@ -173,9 +178,6 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
         <div className="flex items-center justify-between">
           <CardTitle className="text-foreground">Gestión de Inventario</CardTitle>
           <div className="flex items-center gap-2">
-            <Button onClick={handleTestConnection} variant="outline" size="sm">
-              🧪 Probar API
-            </Button>
             <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isRefreshing}>
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
               Refrescar
@@ -220,12 +222,16 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
               <TableHeader>
                 <TableRow className="border-border">
                   <TableHead className="text-muted-foreground">ID</TableHead>
-                  <TableHead className="text-muted-foreground">Producto</TableHead>
-                  <TableHead className="text-muted-foreground">Categoría</TableHead>
-                  <TableHead className="text-muted-foreground">Cantidad</TableHead>
-                  <TableHead className="text-muted-foreground">Precio</TableHead>
-                  <TableHead className="text-muted-foreground">Proveedor</TableHead>
-                  <TableHead className="text-muted-foreground">Estado</TableHead>
+                  <TableHead className="text-muted-foreground">Nombre del Activo</TableHead>
+                  <TableHead className="text-muted-foreground">Tipo de Activo</TableHead>
+                  <TableHead className="text-muted-foreground">Proceso</TableHead>
+                  <TableHead className="text-muted-foreground">Dueño del Activo</TableHead>
+                  <TableHead className="text-muted-foreground">Criticidad</TableHead>
+                  <TableHead className="text-muted-foreground">Confidencialidad</TableHead>
+                  <TableHead className="text-muted-foreground">Disponibilidad</TableHead>
+                  <TableHead className="text-muted-foreground">Integridad</TableHead>
+                  <TableHead className="text-muted-foreground">Formato</TableHead>
+                  <TableHead className="text-muted-foreground">Medio Conservación</TableHead>
                   <TableHead className="text-muted-foreground">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -233,17 +239,52 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
               {filteredItems.map((item) => (
                 <TableRow key={item.id} className="border-border">
                   <TableCell className="font-mono text-sm text-muted-foreground">{item.id}</TableCell>
-                  <TableCell className="font-medium text-foreground">{item.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.category}</TableCell>
-                  <TableCell className="text-foreground">
-                    <span className={item.quantity <= item.minStock ? "text-red-500 font-medium" : ""}>
-                      {item.quantity}
-                    </span>
-                    <span className="text-muted-foreground text-xs ml-1">(min: {item.minStock})</span>
+                  <TableCell className="font-medium text-foreground">
+                    <div className="max-w-[200px] truncate" title={item.NOMBRE_DEL_ACTIVO || 'Sin nombre'}>
+                      {item.NOMBRE_DEL_ACTIVO || 'Sin nombre'}
+                    </div>
                   </TableCell>
-                  <TableCell className="text-foreground font-medium">{formatCurrency(item.price)}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.supplier}</TableCell>
-                  <TableCell>{getStatusBadge(item.status)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="max-w-[120px] truncate" title={item.TIPO_DE_ACTIVO || 'Sin tipo'}>
+                      {item.TIPO_DE_ACTIVO || 'Sin tipo'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-foreground">
+                    <div className="max-w-[150px] truncate" title={item.PROCESO || 'Sin proceso'}>
+                      {item.PROCESO || 'Sin proceso'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="max-w-[150px] truncate" title={item.DUEÑO_DE_ACTIVO || 'Sin dueño'}>
+                      {item.DUEÑO_DE_ACTIVO || 'Sin dueño'}
+                    </div>
+                  </TableCell>
+                  <TableCell>{getStatusBadge(item.CRITICIDAD_TOTAL_DEL_ACTIVO)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="max-w-[100px] truncate" title={item.CONFIDENCIALIDAD || 'Sin datos'}>
+                      {item.CONFIDENCIALIDAD || 'Sin datos'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="max-w-[100px] truncate" title={item.DISPONIBILIDAD || 'Sin datos'}>
+                      {item.DISPONIBILIDAD || 'Sin datos'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="max-w-[100px] truncate" title={item.INTEGRIDAD || 'Sin datos'}>
+                      {item.INTEGRIDAD || 'Sin datos'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="max-w-[100px] truncate" title={item.FORMATO || 'Sin formato'}>
+                      {item.FORMATO || 'Sin formato'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="max-w-[120px] truncate" title={item.MEDIO_DE_CONSERVACIÓN || 'Sin datos'}>
+                      {item.MEDIO_DE_CONSERVACIÓN || 'Sin datos'}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => onEdit(item)}>

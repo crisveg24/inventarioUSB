@@ -2,29 +2,38 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
-import type { InventoryStats } from "@/lib/inventory-data"
 
 interface InventoryChartProps {
-  stats: InventoryStats
+  stats: any
 }
 
 export function InventoryChart({ stats }: InventoryChartProps) {
+  // Generar datos de distribución por proceso basado en los activos
+  const processData = stats.categories?.map((category: any, index: number) => ({
+    proceso: category.name,
+    activos: category.count,
+    color: `hsl(${index * 45}, 70%, 50%)`
+  })) || []
+
   return (
     <Card className="border-border bg-card">
       <CardHeader>
-        <CardTitle className="text-foreground">Movimiento Mensual</CardTitle>
-        <CardDescription className="text-muted-foreground">Entradas y salidas de inventario por mes</CardDescription>
+        <CardTitle className="text-foreground">Distribución por Proceso</CardTitle>
+        <CardDescription className="text-muted-foreground">Cantidad de activos agrupados por proceso</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={stats.monthlyMovement} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <BarChart data={processData} margin={{ top: 5, right: 30, left: 20, bottom: 80 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
             <XAxis 
-              dataKey="month" 
+              dataKey="proceso" 
               stroke="hsl(var(--muted-foreground))" 
               fontSize={12}
               tickLine={false}
               axisLine={false}
+              angle={-45}
+              textAnchor="end"
+              height={80}
             />
             <YAxis 
               stroke="hsl(var(--muted-foreground))" 
@@ -32,29 +41,18 @@ export function InventoryChart({ stats }: InventoryChartProps) {
               tickLine={false}
               axisLine={false}
             />
-            <Tooltip
+            <Tooltip 
               contentStyle={{
-                backgroundColor: "hsl(var(--card))",
+                backgroundColor: "hsl(var(--background))",
                 border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-                color: "hsl(var(--foreground))",
-                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)"
+                borderRadius: "6px"
               }}
-              formatter={(value: any, name: string) => [
-                `${value} productos`,
-                name
-              ]}
+              labelStyle={{ color: "hsl(var(--foreground))" }}
+              formatter={(value: any) => [`${value} activos`, 'Cantidad']}
             />
             <Bar 
-              dataKey="inbound" 
-              fill="#10b981" 
-              name="Entradas" 
-              radius={[4, 4, 0, 0]}
-            />
-            <Bar 
-              dataKey="outbound" 
-              fill="#3b82f6" 
-              name="Salidas" 
+              dataKey="activos" 
+              fill="hsl(var(--primary))"
               radius={[4, 4, 0, 0]}
             />
           </BarChart>

@@ -24,12 +24,11 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { getInventarioActivos } from "@/api"
-import { mapApiActivoToInventoryItem } from "@/lib/api-mapping"
 import { exportToExcel, exportToPDF, generateSummaryReport, type ExportFilters } from "@/lib/export-utils"
-import type { InventoryItem } from "@/lib/inventory-data"
+import type { InventarioActivoOut } from "@/api/types/inventario"
 
 export function AdvancedReports() {
-  const [inventoryData, setInventoryData] = useState<InventoryItem[]>([])
+  const [activosData, setActivosData] = useState<InventarioActivoOut[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [exportType, setExportType] = useState<'excel' | 'pdf'>('excel')
@@ -38,17 +37,21 @@ export function AdvancedReports() {
 
   // Estados para filtros
   const [filters, setFilters] = useState<ExportFilters>({
-    category: 'all',
-    status: 'all',
-    stockRange: { min: 0, max: 1000 },
+    tipoActivo: 'all',
+    proceso: 'all',
+    criticidad: 'all',
+    confidencialidad: 'all',
+    disponibilidad: 'all',
     limit: undefined,
     offset: undefined
   })
 
   const [includeFilters, setIncludeFilters] = useState({
-    category: false,
-    status: false,
-    stockRange: false,
+    tipoActivo: false,
+    proceso: false,
+    criticidad: false,
+    confidencialidad: false,
+    disponibilidad: false,
     limit: false
   })
 
@@ -60,9 +63,8 @@ export function AdvancedReports() {
     try {
       console.log('🔄 Cargando datos para reportes...')
       const activosData = await getInventarioActivos({ limit: 1000 })
-      const mappedItems = activosData.map(mapApiActivoToInventoryItem)
-      setInventoryData(mappedItems)
-      console.log('✅ Datos cargados:', mappedItems.length, 'items')
+      setActivosData(activosData)
+      console.log('✅ Datos cargados:', activosData.length, 'activos')
     } catch (error) {
       console.error('❌ Error al cargar datos:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -76,23 +78,34 @@ export function AdvancedReports() {
     loadInventoryData()
   }, [])
 
-  // Obtener categorías únicas
-  const uniqueCategories = [...new Set(inventoryData.map(item => item.category))]
+  // Obtener tipos únicos de activos
+  const uniqueTypes = [...new Set(activosData.map(item => item.TIPO_DE_ACTIVO).filter(Boolean))]
+  
+  // Obtener procesos únicos
+  const uniqueProcesses = [...new Set(activosData.map(item => item.PROCESO).filter(Boolean))]
 
   // Preparar filtros para exportación
   const prepareFilters = (): ExportFilters => {
     const exportFilters: ExportFilters = {}
 
-    if (includeFilters.category && filters.category !== 'all') {
-      exportFilters.category = filters.category
+    if (includeFilters.tipoActivo && filters.tipoActivo !== 'all') {
+      exportFilters.tipoActivo = filters.tipoActivo
     }
 
-    if (includeFilters.status && filters.status !== 'all') {
-      exportFilters.status = filters.status as any
+    if (includeFilters.proceso && filters.proceso !== 'all') {
+      exportFilters.proceso = filters.proceso
     }
 
-    if (includeFilters.stockRange) {
-      exportFilters.stockRange = filters.stockRange
+    if (includeFilters.criticidad && filters.criticidad !== 'all') {
+      exportFilters.criticidad = filters.criticidad
+    }
+
+    if (includeFilters.confidencialidad && filters.confidencialidad !== 'all') {
+      exportFilters.confidencialidad = filters.confidencialidad
+    }
+
+    if (includeFilters.disponibilidad && filters.disponibilidad !== 'all') {
+      exportFilters.disponibilidad = filters.disponibilidad
     }
 
     if (includeFilters.limit && filters.limit) {
@@ -105,10 +118,10 @@ export function AdvancedReports() {
 
   // Manejar exportación
   const handleExport = async () => {
-    if (inventoryData.length === 0) {
+    if (activosData.length === 0) {
       toast({
         title: "Sin datos",
-        description: "No hay datos de inventario para exportar",
+        description: "No hay datos de activos para exportar",
         variant: "destructive"
       })
       return
@@ -119,19 +132,19 @@ export function AdvancedReports() {
     try {
       const exportFilters = prepareFilters()
       const timestamp = new Date().toISOString().split('T')[0]
-      const filename = `inventario_${timestamp}.${exportType === 'excel' ? 'xlsx' : 'pdf'}`
+      const filename = `activos_${timestamp}.${exportType === 'excel' ? 'xlsx' : 'pdf'}`
 
       let result
       if (exportType === 'excel') {
-        result = exportToExcel(inventoryData, {
+        result = exportToExcel(activosData, {
           filename,
-          title: 'Reporte de Inventario - Sistema USB',
+          title: 'Reporte de Activos de Información - Sistema USB',
           filters: exportFilters
         })
       } else {
-        result = exportToPDF(inventoryData, {
+        result = exportToPDF(activosData, {
           filename,
-          title: 'Reporte de Inventario - Sistema USB',
+          title: 'Reporte de Activos de Información - Sistema USB',
           filters: exportFilters
         })
       }
@@ -155,14 +168,14 @@ export function AdvancedReports() {
 
   // Generar reporte de resumen
   const handleSummaryReport = () => {
-    if (inventoryData.length === 0) return
+    if (activosData.length === 0) return
 
-    const summary = generateSummaryReport(inventoryData)
-    console.log('📊 Resumen del inventario:', summary)
+    const summary = generateSummaryReport(activosData)
+    console.log('📊 Resumen de activos:', summary)
     
     toast({
       title: "Reporte de resumen generado",
-      description: `Total: ${summary.totalItems} productos, Valor: $${summary.totalValue.toLocaleString()}`,
+      description: `Total: ${summary.totalItems} activos, Criticidad alta: ${summary.criticalItems}`,
     })
 
     // Aquí podrías abrir un modal con el resumen detallado
@@ -199,8 +212,25 @@ export function AdvancedReports() {
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-blue-500" />
               <div>
-                <p className="text-sm text-muted-foreground">Total Productos</p>
-                <p className="text-2xl font-bold">{inventoryData.length}</p>
+                <p className="text-sm text-muted-foreground">Total Activos</p>
+                <p className="text-2xl font-bold">{activosData.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Criticidad Alta</p>
+                <p className="text-2xl font-bold">
+                  {activosData.filter(item => 
+                    item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes('alta') ||
+                    item.CRITICIDAD_TOTAL_DEL_ACTIVO?.toLowerCase().includes('crítica')
+                  ).length}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -211,23 +241,12 @@ export function AdvancedReports() {
             <div className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
               <div>
-                <p className="text-sm text-muted-foreground">En Stock</p>
+                <p className="text-sm text-muted-foreground">Alta Confidencialidad</p>
                 <p className="text-2xl font-bold">
-                  {inventoryData.filter(item => item.status === 'in-stock').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Stock Bajo</p>
-                <p className="text-2xl font-bold">
-                  {inventoryData.filter(item => item.status === 'low-stock').length}
+                  {activosData.filter(item => 
+                    item.CONFIDENCIALIDAD?.toLowerCase().includes('alta') ||
+                    item.CONFIDENCIALIDAD?.toLowerCase().includes('confidencial')
+                  ).length}
                 </p>
               </div>
             </div>
@@ -239,8 +258,8 @@ export function AdvancedReports() {
             <div className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-purple-500" />
               <div>
-                <p className="text-sm text-muted-foreground">Categorías</p>
-                <p className="text-2xl font-bold">{uniqueCategories.length}</p>
+                <p className="text-sm text-muted-foreground">Tipos de Activos</p>
+                <p className="text-2xl font-bold">{uniqueTypes.length}</p>
               </div>
             </div>
           </CardContent>
@@ -286,30 +305,30 @@ export function AdvancedReports() {
           <div className="space-y-4">
             <h3 className="font-medium">Filtros de datos</h3>
 
-            {/* Filtro por categoría */}
+            {/* Filtro por tipo de activo */}
             <div className="flex items-center space-x-4">
               <Checkbox
-                id="category-filter"
-                checked={includeFilters.category}
+                id="type-filter"
+                checked={includeFilters.tipoActivo}
                 onCheckedChange={(checked) => 
-                  setIncludeFilters(prev => ({ ...prev, category: !!checked }))
+                  setIncludeFilters(prev => ({ ...prev, tipoActivo: !!checked }))
                 }
               />
               <div className="flex-1 space-y-2">
-                <Label htmlFor="category-filter">Filtrar por categoría</Label>
+                <Label htmlFor="type-filter">Filtrar por tipo de activo</Label>
                 <Select 
-                  value={filters.category} 
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
-                  disabled={!includeFilters.category}
+                  value={filters.tipoActivo} 
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, tipoActivo: value }))}
+                  disabled={!includeFilters.tipoActivo}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar categoría" />
+                    <SelectValue placeholder="Seleccionar tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas las categorías</SelectItem>
-                    {uniqueCategories.map(category => (
-                      <SelectItem key={category} value={category}>
-                        {category}
+                    <SelectItem value="all">Todos los tipos</SelectItem>
+                    {uniqueTypes.map(type => type && (
+                      <SelectItem key={type} value={type}>
+                        {type}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -317,68 +336,122 @@ export function AdvancedReports() {
               </div>
             </div>
 
-            {/* Filtro por estado */}
+            {/* Filtro por proceso */}
             <div className="flex items-center space-x-4">
               <Checkbox
-                id="status-filter"
-                checked={includeFilters.status}
+                id="process-filter"
+                checked={includeFilters.proceso}
                 onCheckedChange={(checked) => 
-                  setIncludeFilters(prev => ({ ...prev, status: !!checked }))
+                  setIncludeFilters(prev => ({ ...prev, proceso: !!checked }))
                 }
               />
               <div className="flex-1 space-y-2">
-                <Label htmlFor="status-filter">Filtrar por estado</Label>
+                <Label htmlFor="process-filter">Filtrar por proceso</Label>
                 <Select 
-                  value={filters.status} 
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
-                  disabled={!includeFilters.status}
+                  value={filters.proceso} 
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, proceso: value }))}
+                  disabled={!includeFilters.proceso}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar estado" />
+                    <SelectValue placeholder="Seleccionar proceso" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="in-stock">En Stock</SelectItem>
-                    <SelectItem value="low-stock">Stock Bajo</SelectItem>
-                    <SelectItem value="out-of-stock">Sin Stock</SelectItem>
+                    <SelectItem value="all">Todos los procesos</SelectItem>
+                    {uniqueProcesses.map(process => process && (
+                      <SelectItem key={process} value={process}>
+                        {process}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* Filtro por rango de stock */}
+            {/* Filtro por criticidad */}
             <div className="flex items-center space-x-4">
               <Checkbox
-                id="stock-filter"
-                checked={includeFilters.stockRange}
+                id="criticality-filter"
+                checked={includeFilters.criticidad}
                 onCheckedChange={(checked) => 
-                  setIncludeFilters(prev => ({ ...prev, stockRange: !!checked }))
+                  setIncludeFilters(prev => ({ ...prev, criticidad: !!checked }))
                 }
               />
               <div className="flex-1 space-y-2">
-                <Label htmlFor="stock-filter">Filtrar por cantidad en stock</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Mín"
-                    value={filters.stockRange?.min || ''}
-                    onChange={(e) => setFilters(prev => ({
-                      ...prev,
-                      stockRange: { ...prev.stockRange!, min: Number(e.target.value) || 0 }
-                    }))}
-                    disabled={!includeFilters.stockRange}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Máx"
-                    value={filters.stockRange?.max || ''}
-                    onChange={(e) => setFilters(prev => ({
-                      ...prev,
-                      stockRange: { ...prev.stockRange!, max: Number(e.target.value) || 1000 }
-                    }))}
-                    disabled={!includeFilters.stockRange}
-                  />
-                </div>
+                <Label htmlFor="criticality-filter">Filtrar por criticidad</Label>
+                <Select 
+                  value={filters.criticidad} 
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, criticidad: value }))}
+                  disabled={!includeFilters.criticidad}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar criticidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las criticidades</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="media">Media</SelectItem>
+                    <SelectItem value="baja">Baja</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Filtro por confidencialidad */}
+            <div className="flex items-center space-x-4">
+              <Checkbox
+                id="confidentiality-filter"
+                checked={includeFilters.confidencialidad}
+                onCheckedChange={(checked) => 
+                  setIncludeFilters(prev => ({ ...prev, confidencialidad: !!checked }))
+                }
+              />
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="confidentiality-filter">Filtrar por confidencialidad</Label>
+                <Select 
+                  value={filters.confidencialidad} 
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, confidencialidad: value }))}
+                  disabled={!includeFilters.confidencialidad}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar confidencialidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="media">Media</SelectItem>
+                    <SelectItem value="baja">Baja</SelectItem>
+                    <SelectItem value="pública">Pública</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Filtro por disponibilidad */}
+            <div className="flex items-center space-x-4">
+              <Checkbox
+                id="availability-filter"
+                checked={includeFilters.disponibilidad}
+                onCheckedChange={(checked) => 
+                  setIncludeFilters(prev => ({ ...prev, disponibilidad: !!checked }))
+                }
+              />
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="availability-filter">Filtrar por disponibilidad</Label>
+                <Select 
+                  value={filters.disponibilidad} 
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, disponibilidad: value }))}
+                  disabled={!includeFilters.disponibilidad}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar disponibilidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="media">Media</SelectItem>
+                    <SelectItem value="baja">Baja</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -412,6 +485,7 @@ export function AdvancedReports() {
                       ...prev,
                       limit: Number(e.target.value) || undefined
                     }))}
+
                     disabled={!includeFilters.limit}
                   />
                 </div>
@@ -422,20 +496,24 @@ export function AdvancedReports() {
           <Separator />
 
           {/* Filtros activos */}
-          {(includeFilters.category || includeFilters.status || includeFilters.stockRange || includeFilters.limit) && (
+          {(includeFilters.tipoActivo || includeFilters.proceso || includeFilters.criticidad || includeFilters.confidencialidad || includeFilters.disponibilidad || includeFilters.limit) && (
             <div className="space-y-2">
               <Label>Filtros activos:</Label>
               <div className="flex flex-wrap gap-2">
-                {includeFilters.category && filters.category !== 'all' && (
-                  <Badge variant="secondary">Categoría: {filters.category}</Badge>
+                {includeFilters.tipoActivo && filters.tipoActivo !== 'all' && (
+                  <Badge variant="secondary">Tipo: {filters.tipoActivo}</Badge>
                 )}
-                {includeFilters.status && filters.status !== 'all' && (
-                  <Badge variant="secondary">Estado: {filters.status}</Badge>
+                {includeFilters.proceso && filters.proceso !== 'all' && (
+                  <Badge variant="secondary">Proceso: {filters.proceso}</Badge>
                 )}
-                {includeFilters.stockRange && (
-                  <Badge variant="secondary">
-                    Stock: {filters.stockRange?.min} - {filters.stockRange?.max}
-                  </Badge>
+                {includeFilters.criticidad && filters.criticidad !== 'all' && (
+                  <Badge variant="secondary">Criticidad: {filters.criticidad}</Badge>
+                )}
+                {includeFilters.confidencialidad && filters.confidencialidad !== 'all' && (
+                  <Badge variant="secondary">Confidencialidad: {filters.confidencialidad}</Badge>
+                )}
+                {includeFilters.disponibilidad && filters.disponibilidad !== 'all' && (
+                  <Badge variant="secondary">Disponibilidad: {filters.disponibilidad}</Badge>
                 )}
                 {includeFilters.limit && filters.limit && (
                   <Badge variant="secondary">
@@ -464,7 +542,7 @@ export function AdvancedReports() {
             <Button 
               variant="outline" 
               onClick={handleSummaryReport}
-              disabled={inventoryData.length === 0}
+              disabled={activosData.length === 0}
             >
               <BarChart3 className="h-4 w-4 mr-2" />
               Resumen Ejecutivo

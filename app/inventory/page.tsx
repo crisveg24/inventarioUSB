@@ -7,25 +7,28 @@ import { InventoryTable } from "@/components/inventory/inventory-table"
 import { InventoryForm } from "@/components/inventory/inventory-form"
 import { DeleteConfirmation } from "@/components/inventory/delete-confirmation"
 import { useToast } from "@/hooks/use-toast"
-import type { InventoryItem } from "@/lib/inventory-data"
+import { InventarioActivoOut } from "@/api/types/inventario"
 import { deleteInventarioActivoValidated } from "@/api"
 
 export default function InventoryPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
-  const [deletingItem, setDeletingItem] = useState<{ id: string; name: string } | null>(null)
+  const [editingItem, setEditingItem] = useState<InventarioActivoOut | null>(null)
+  const [deletingItem, setDeletingItem] = useState<{ id: number; name: string } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0) // Para refrescar la tabla sin reload
   const { toast } = useToast()
 
-  const handleEdit = (item: InventoryItem) => {
+  const handleEdit = (item: InventarioActivoOut) => {
     setEditingItem(item)
     setIsFormOpen(true)
   }
 
-  const handleDelete = (item: InventoryItem) => {
-    setDeletingItem({ id: item.id, name: item.name })
+  const handleDelete = (item: InventarioActivoOut) => {
+    setDeletingItem({ 
+      id: item.id, 
+      name: item.NOMBRE_DEL_ACTIVO || 'Activo sin nombre' 
+    })
     setIsDeleteOpen(true)
   }
 
@@ -48,7 +51,7 @@ export default function InventoryPage() {
     
     setIsLoading(true)
     try {
-      await deleteInventarioActivoValidated(Number.parseInt(deletingItem.id))
+      await deleteInventarioActivoValidated(deletingItem.id)
       toast({
         title: "Activo eliminado",
         description: `El activo "${deletingItem.name}" ha sido eliminado del inventario.`,
@@ -85,14 +88,12 @@ export default function InventoryPage() {
 
           <InventoryTable onEdit={handleEdit} onDelete={handleDelete} onAdd={handleAdd} refreshKey={refreshKey} />
 
-          <InventoryForm
-            isOpen={isFormOpen}
-            onClose={() => setIsFormOpen(false)}
-            onSave={handleSave}
-            editingItem={editingItem}
-          />
-
-          <DeleteConfirmation
+        <InventoryForm
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSave={handleSave}
+          editingItem={editingItem}
+        />          <DeleteConfirmation
             isOpen={isDeleteOpen}
             onClose={() => setIsDeleteOpen(false)}
             onConfirm={handleConfirmDelete}
