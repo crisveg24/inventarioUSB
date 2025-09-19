@@ -37,26 +37,52 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
   
   const { toast } = useToast()
 
-  const loadInventoryData = async (page: number = currentPage) => {
+  const loadInventoryData = async () => {
     try {
+      setIsLoading(true)
       setError(null)
-      const skip = (page - 1) * itemsPerPage
-      const activosData = await getInventarioActivos({ skip, limit: itemsPerPage })
+      
+      console.log(`🔄 Cargando página ${currentPage}, items por página: ${itemsPerPage}`)
+      
+      const skip = (currentPage - 1) * itemsPerPage
+      console.log(`📊 Parámetros: skip=${skip}, limit=${itemsPerPage}`)
+      
+      // Cargar solo los datos de la página actual
+      const activosData = await getInventarioActivos({ 
+        skip: skip, 
+        limit: itemsPerPage 
+      })
+      
+      console.log(`✅ Datos recibidos: ${activosData.length} items para la página ${currentPage}`)
+      
       const mappedItems = activosData.map(mapApiActivoToInventoryItem)
       setItems(mappedItems)
       
-      // Para obtener el total, hacemos una consulta adicional con un límite alto
-      // En una implementación real, la API debería devolver el total
-      if (page === 1) {
+      // Solo obtener el total en la primera carga o cuando sea necesario
+      // En una API real, esto debería venir en la respuesta de paginación
+      if (totalItems === 0) {
         try {
+          console.log('🔍 Obteniendo total de items...')
+          // Hacer una consulta para obtener solo el primer elemento y estimar el total
+          // o usar un endpoint específico para contar
           const allItems = await getInventarioActivos({ skip: 0, limit: 1000 })
-          setTotalItems(allItems.length)
-        } catch {
-          // Si falla obtener el total, usamos el número actual de items como mínimo
-          setTotalItems(mappedItems.length)
+          const total = allItems.length
+          setTotalItems(total)
+          console.log(`📈 Total de items: ${total}`)
+        } catch (totalError) {
+          console.warn('⚠️ Error al obtener total, usando estimación:', totalError)
+          // Estimar el total basado en si la página actual está llena
+          if (activosData.length === itemsPerPage) {
+            // Si la página actual está llena, probablemente hay más páginas
+            setTotalItems(currentPage * itemsPerPage + 1)
+          } else {
+            // Si la página actual no está llena, es la última página
+            setTotalItems((currentPage - 1) * itemsPerPage + activosData.length)
+          }
         }
       }
     } catch (err) {
+      console.error('❌ Error al cargar inventario:', err)
       const errorMessage = err instanceof Error ? err.message : 'Error al cargar los datos del inventario'
       setError(errorMessage)
       toast({
@@ -112,21 +138,20 @@ export function InventoryTable({ onEdit, onDelete, onAdd, refreshKey }: Inventor
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await loadInventoryData(currentPage)
+    await loadInventoryData()
     setIsRefreshing(false)
   }
 
   const handlePageChange = async (newPage: number) => {
     setCurrentPage(newPage)
-    setIsLoading(true)
-    await loadInventoryData(newPage)
+    // loadInventoryData se ejecutará automáticamente por el useEffect cuando currentPage cambie
   }
 
   const handleItemsPerPageChange = async (newItemsPerPage: number) => {
     setItemsPerPage(newItemsPerPage)
     setCurrentPage(1)
-    setIsLoading(true)
-    await loadInventoryData(1)
+    setTotalItems(0) // Reset total para que se recalcule
+    // loadInventoryData se ejecutará automáticamente por el useEffect cuando itemsPerPage y currentPage cambien
   }
 
   const getStatusBadge = (status: InventoryItem["status"]) => {
